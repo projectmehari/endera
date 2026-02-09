@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from "react";
-import { Play, Square, Radio } from "lucide-react";
 import { useNowPlaying } from "@/hooks/useNowPlaying";
 
 export default function RadioPlayer() {
@@ -8,13 +7,11 @@ export default function RadioPlayer() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [currentFileUrl, setCurrentFileUrl] = useState<string | null>(null);
 
-  // When now_playing changes, update the audio source
   useEffect(() => {
     if (data?.now_playing && data.now_playing.file_url !== currentFileUrl) {
       setCurrentFileUrl(data.now_playing.file_url);
       if (audioRef.current) {
         audioRef.current.src = data.now_playing.file_url;
-        // Seek to the elapsed position
         audioRef.current.currentTime = data.elapsed_seconds;
         if (isPlaying) {
           audioRef.current.play().catch(() => {});
@@ -39,120 +36,159 @@ export default function RadioPlayer() {
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
     const s = Math.floor(seconds % 60);
-    return `${m}:${s.toString().padStart(2, "0")}`;
+    return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-radio-dark">
-      <div className="w-full max-w-lg">
-        {/* Station Header */}
-        <div className="text-center mb-6">
-          <h1 className="font-display text-3xl font-bold radio-glow-text tracking-wide">
-            INTERNET RADIO
-          </h1>
-          <div className="flex items-center justify-center gap-2 mt-2">
-            <div className={isPlaying ? "radio-indicator animate-pulse-glow" : "radio-indicator-off"} />
-            <span className="text-xs uppercase tracking-[0.3em] text-muted-foreground font-mono">
-              {isPlaying ? "On Air" : "Off Air"}
-            </span>
-          </div>
-        </div>
+  const now = new Date();
+  const dateStr = now.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const timeStr = now.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
 
-        {/* Main Radio Panel */}
-        <div className="radio-panel rounded-xl p-6 border border-border">
-          {/* Now Playing Display */}
-          <div className="radio-embossed rounded-lg p-5 mb-5">
-            <div className="flex items-center gap-2 mb-3">
-              <Radio className="w-4 h-4 text-primary" />
-              <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                Now Playing
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+      <div className="w-full max-w-md">
+        {/* Outer meter housing */}
+        <div className="meter-panel p-0">
+          {/* Header strip */}
+          <div className="border-b border-foreground px-4 py-2 flex items-center justify-between">
+            <span className="meter-label">OKOK—RADIO—METER</span>
+            <span className="meter-label">{dateStr}</span>
+          </div>
+
+          {/* Station ID */}
+          <div className="px-4 pt-6 pb-2 text-center">
+            <h1 className="font-display text-2xl font-bold tracking-tight uppercase leading-none">
+              INTERNET
+            </h1>
+            <h1 className="font-display text-2xl font-bold tracking-tight uppercase leading-none">
+              RADIO
+            </h1>
+            <div className="mt-2 meter-label text-center">
+              MEASURING EQUIPMENT FOR AUDIO READINGS
+            </div>
+          </div>
+
+          <div className="receipt-tear mx-4 my-4" />
+
+          {/* Status indicator */}
+          <div className="px-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className={isPlaying ? "meter-dot-active" : "meter-dot-off"} />
+              <span className="meter-label">
+                {isPlaying ? "TRANSMITTING" : "STANDBY"}
               </span>
             </div>
+            <span className="meter-label">{timeStr}</span>
+          </div>
+
+          {/* Now Playing readout */}
+          <div className="mx-4 mt-4 meter-inset p-4">
+            <div className="meter-label mb-2">— CURRENT READING —</div>
             {loading ? (
-              <div className="text-muted-foreground text-sm">Tuning in...</div>
+              <div className="meter-value text-sm text-muted-foreground">
+                CALIBRATING<span className="animate-blink">_</span>
+              </div>
             ) : data?.now_playing ? (
               <div>
-                <p className="font-display text-xl font-bold text-foreground truncate">
+                <p className="meter-value text-lg leading-tight">
                   {data.now_playing.title}
                 </p>
-                <p className="text-primary text-sm mt-1 font-typewriter">
-                  {data.now_playing.artist}
+                <p className="meter-label mt-1 text-foreground tracking-[0.1em]">
+                  BY {data.now_playing.artist.toUpperCase()}
                 </p>
-                <div className="flex justify-between items-center mt-3 text-xs text-muted-foreground font-mono">
-                  <span>{formatTime(data.elapsed_seconds)}</span>
-                  <div className="flex-1 mx-3 h-1 bg-secondary rounded-full overflow-hidden">
+
+                {/* Progress bar as meter gauge */}
+                <div className="mt-4 flex items-center gap-2">
+                  <span className="meter-label text-foreground">{formatTime(data.elapsed_seconds)}</span>
+                  <div className="flex-1 h-[3px] bg-muted relative">
                     <div
-                      className="h-full bg-primary rounded-full transition-all duration-1000"
+                      className="h-full bg-foreground transition-all duration-1000"
                       style={{
                         width: `${(data.elapsed_seconds / Math.max(data.now_playing.duration_seconds, 1)) * 100}%`,
                       }}
                     />
                   </div>
-                  <span>{formatTime(data.now_playing.duration_seconds)}</span>
+                  <span className="meter-label text-foreground">{formatTime(data.now_playing.duration_seconds)}</span>
                 </div>
               </div>
             ) : (
-              <div className="text-muted-foreground font-typewriter text-sm">
-                No tracks in the queue. Silence...
+              <div className="meter-value text-sm text-muted-foreground">
+                NO SIGNAL DETECTED
               </div>
             )}
           </div>
 
-          {/* Play Button */}
-          <div className="flex justify-center mb-5">
+          {/* Control */}
+          <div className="px-4 mt-4 flex justify-center">
             <button
               onClick={togglePlay}
               disabled={!data?.now_playing}
-              className="w-16 h-16 rounded-full bg-secondary border-2 border-border flex items-center justify-center hover:border-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed group"
-              aria-label={isPlaying ? "Stop" : "Play"}
+              className="meter-panel px-8 py-2 meter-value text-sm hover:bg-foreground hover:text-background transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             >
-              {isPlaying ? (
-                <Square className="w-6 h-6 text-primary group-hover:text-radio-glow transition-colors" />
-              ) : (
-                <Play className="w-6 h-6 text-primary group-hover:text-radio-glow transition-colors ml-1" />
-              )}
+              {isPlaying ? "■ STOP" : "▶ TUNE IN"}
             </button>
           </div>
 
-          {/* Up Next */}
-          {data?.up_next && data.up_next.length > 0 && (
-            <div className="radio-embossed rounded-lg p-4">
-              <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-3 block">
-                Up Next
-              </span>
-              <div className="space-y-2">
+          <div className="receipt-tear mx-4 my-4" />
+
+          {/* Up Next queue */}
+          <div className="px-4 pb-2">
+            <div className="meter-label mb-2">— UPCOMING READINGS —</div>
+            {data?.up_next && data.up_next.length > 0 ? (
+              <div>
                 {data.up_next.map((track, i) => (
                   <div
                     key={track.id}
-                    className="flex items-center justify-between text-sm py-1.5 border-b border-border last:border-0"
+                    className="flex items-baseline justify-between py-1 receipt-line last:border-0"
                   >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className="text-muted-foreground font-mono text-xs w-4">
-                        {i + 1}
-                      </span>
-                      <div className="min-w-0">
-                        <p className="text-foreground truncate text-sm">{track.title}</p>
-                        <p className="text-muted-foreground text-xs truncate">{track.artist}</p>
-                      </div>
+                    <div className="flex items-baseline gap-2 min-w-0 flex-1">
+                      <span className="meter-label text-foreground w-4">{String(i + 1).padStart(2, "0")}</span>
+                      <span className="text-xs font-mono uppercase truncate">{track.title}</span>
                     </div>
-                    <span className="text-muted-foreground font-mono text-xs ml-2">
-                      {formatTime(track.duration_seconds)}
-                    </span>
+                    <span className="meter-label text-foreground ml-2">{formatTime(track.duration_seconds)}</span>
                   </div>
                 ))}
               </div>
+            ) : (
+              <div className="meter-value text-xs text-muted-foreground">QUEUE EMPTY</div>
+            )}
+          </div>
+
+          <div className="receipt-tear mx-4 my-2" />
+
+          {/* Footer */}
+          <div className="px-4 py-3 flex items-center justify-between">
+            <span className="meter-label">
+              {data?.total_tracks || 0} TRACKS LOADED
+            </span>
+            <a
+              href="/admin"
+              className="meter-label hover:text-foreground transition-colors"
+            >
+              [ADMIN]
+            </a>
+          </div>
+
+          {/* Bottom strip */}
+          <div className="border-t border-foreground px-4 py-2">
+            <div className="meter-label text-center">
+              READ INSTRUCTIONS BEFORE USING — FAILURE TO FOLLOW INSTRUCTIONS COULD RESULT IN SILENCE
             </div>
-          )}
+          </div>
         </div>
 
-        {/* Footer */}
-        <div className="text-center mt-4">
-          <a
-            href="/admin"
-            className="text-xs text-muted-foreground hover:text-primary transition-colors font-mono"
-          >
-            ⚙ manage
-          </a>
+        {/* Small print beneath */}
+        <div className="mt-3 text-center">
+          <span className="meter-label">
+            © {now.getFullYear()} PROPERTY OF INTERNET RADIO
+          </span>
         </div>
 
         <audio ref={audioRef} preload="none" />
