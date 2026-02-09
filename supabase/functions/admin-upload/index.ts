@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { token, title, artist, fileName, fileBase64, contentType } = await req.json();
+    const { token, title, artist, fileUrl, durationSeconds } = await req.json();
 
     if (!verifyToken(token)) {
       return new Response(
@@ -36,32 +36,6 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
-
-    // Decode base64 to Uint8Array
-    const binaryStr = atob(fileBase64);
-    const bytes = new Uint8Array(binaryStr.length);
-    for (let i = 0; i < binaryStr.length; i++) {
-      bytes[i] = binaryStr.charCodeAt(i);
-    }
-
-    // Upload to storage
-    const filePath = `${crypto.randomUUID()}-${fileName}`;
-    const { error: uploadError } = await supabase.storage
-      .from("tracks")
-      .upload(filePath, bytes, { contentType: contentType || "audio/mpeg" });
-
-    if (uploadError) throw uploadError;
-
-    // Get public URL
-    const { data: urlData } = supabase.storage.from("tracks").getPublicUrl(filePath);
-    const fileUrl = urlData.publicUrl;
-
-    // Get duration estimate (we'll default to 0, user can update)
-    // Try to parse duration from the audio data
-    let durationSeconds = 0;
-    // Rough MP3 duration estimate: file size / bitrate
-    // Assuming ~192kbps = 24000 bytes/sec
-    durationSeconds = Math.round(bytes.length / 24000);
 
     // Get max play_order
     const { data: maxOrderData } = await supabase
@@ -76,7 +50,7 @@ Deno.serve(async (req) => {
     const { error: insertError } = await supabase.from("tracks").insert({
       title,
       artist: artist || "Unknown",
-      duration_seconds: durationSeconds,
+      duration_seconds: durationSeconds || 0,
       file_url: fileUrl,
       play_order: nextOrder,
     });
