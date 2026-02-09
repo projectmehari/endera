@@ -94,13 +94,22 @@ function TrackManager() {
     if (!file || !title) return;
     setUploading(true);
     try {
-      const reader = new FileReader();
-      const base64 = await new Promise<string>((resolve) => {
-        reader.onload = () => resolve((reader.result as string).split(",")[1]);
-        reader.readAsDataURL(file);
-      });
+      // Upload file directly to storage (public bucket allows inserts)
+      const filePath = `${crypto.randomUUID()}-${file.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from("tracks")
+        .upload(filePath, file, { contentType: file.type || "audio/mpeg" });
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: urlData } = supabase.storage.from("tracks").getPublicUrl(filePath);
+
+      // Estimate duration: fileSize / ~24000 bytes per second (192kbps)
+      const durationSeconds = Math.round(file.size / 24000);
+
+      // Use edge function to insert track record (admin-verified)
       const { data, error } = await supabase.functions.invoke("admin-upload", {
-        body: { token, title, artist: artist || "Unknown", fileName: file.name, fileBase64: base64, contentType: file.type },
+        body: { token, title, artist: artist || "Unknown", fileUrl: urlData.publicUrl, durationSeconds },
       });
       if (error || !data?.success) throw new Error(data?.error || "Upload failed");
       toast({ title: "TRACK UPLOADED" });
