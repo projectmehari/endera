@@ -71,6 +71,7 @@ function TrackManager() {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [title, setTitle] = useState("");
   const [artist, setArtist] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -93,13 +94,33 @@ function TrackManager() {
     const file = fileRef.current?.files?.[0];
     if (!file || !title) return;
     setUploading(true);
+    setUploadProgress(0);
     try {
-      // Upload file directly to storage (public bucket allows inserts)
+      // Upload file via XMLHttpRequest for progress tracking
       const filePath = `${crypto.randomUUID()}-${file.name}`;
-      const { error: uploadError } = await supabase.storage
-        .from("tracks")
-        .upload(filePath, file, { contentType: file.type || "audio/mpeg" });
-      if (uploadError) throw uploadError;
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", `${supabaseUrl}/storage/v1/object/tracks/${filePath}`);
+        xhr.setRequestHeader("Authorization", `Bearer ${supabaseKey}`);
+        xhr.setRequestHeader("apikey", supabaseKey);
+        xhr.setRequestHeader("Content-Type", file.type || "audio/mpeg");
+        xhr.setRequestHeader("x-upsert", "false");
+
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            setUploadProgress(Math.round((e.loaded / e.total) * 100));
+          }
+        };
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) resolve();
+          else reject(new Error(`Upload failed: ${xhr.statusText}`));
+        };
+        xhr.onerror = () => reject(new Error("Upload failed"));
+        xhr.send(file);
+      });
 
       // Get public URL
       const { data: urlData } = supabase.storage.from("tracks").getPublicUrl(filePath);
@@ -118,7 +139,7 @@ function TrackManager() {
       fetchTracks();
     } catch (err: any) {
       toast({ title: "UPLOAD FAILED", description: err.message, variant: "destructive" });
-    } finally { setUploading(false); }
+    } finally { setUploading(false); setUploadProgress(0); }
   };
 
   const deleteTrack = async (track: Track) => {
@@ -175,8 +196,22 @@ function TrackManager() {
               <Label className="meter-label">MP3 FILE *</Label>
               <Input ref={fileRef} type="file" accept="audio/mpeg,audio/mp3" className="mt-1 font-mono text-xs" required />
             </div>
+            {uploading && (
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="meter-label text-foreground">UPLOADING</span>
+                  <span className="meter-label text-foreground">{uploadProgress}%</span>
+                </div>
+                <div className="h-[3px] bg-muted w-full">
+                  <div
+                    className="h-full bg-foreground transition-all duration-200"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+              </div>
+            )}
             <button type="submit" disabled={uploading} className="w-full meter-panel px-4 py-2 meter-value text-xs hover:bg-foreground hover:text-background transition-colors disabled:opacity-50">
-              {uploading ? "UPLOADING..." : "UPLOAD TRACK"}
+              {uploading ? `UPLOADING... ${uploadProgress}%` : "UPLOAD TRACK"}
             </button>
           </form>
         </div>
