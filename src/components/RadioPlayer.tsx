@@ -58,20 +58,20 @@ export default function RadioPlayer() {
         <div className="meter-panel p-0">
           {/* Header strip */}
           <div className="border-b border-foreground px-4 py-2 flex items-center justify-between">
-            <span className="meter-label">OKOK—RADIO—METER</span>
+            <span className="meter-label">ENDERA.FM—METER</span>
             <span className="meter-label">{dateStr}</span>
           </div>
 
           {/* Station ID */}
           <div className="px-4 pt-6 pb-2 text-center">
             <h1 className="font-display text-2xl font-bold tracking-tight uppercase leading-none">
-              INTERNET
+              ENDERA
             </h1>
             <h1 className="font-display text-2xl font-bold tracking-tight uppercase leading-none">
-              RADIO
+              .FM
             </h1>
             <div className="mt-2 meter-label text-center">
-              MEASURING EQUIPMENT FOR AUDIO READINGS
+              AUDIO TRANSMISSION EQUIPMENT BY ENDERA
             </div>
           </div>
 
@@ -179,7 +179,7 @@ export default function RadioPlayer() {
           {/* Bottom strip */}
           <div className="border-t border-foreground px-4 py-2">
             <div className="meter-label text-center">
-              READ INSTRUCTIONS BEFORE USING — FAILURE TO FOLLOW INSTRUCTIONS COULD RESULT IN SILENCE
+              ENDERA.FM — CONTINUOUS AUDIO TRANSMISSION — TUNE IN AND LISTEN
             </div>
           </div>
         </div>
@@ -187,7 +187,7 @@ export default function RadioPlayer() {
         {/* Small print beneath */}
         <div className="mt-3 text-center">
           <span className="meter-label">
-            © {now.getFullYear()} PROPERTY OF INTERNET RADIO
+            © {now.getFullYear()} ENDERA.FM
           </span>
         </div>
 
