@@ -14,7 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      station_config: {
+        Row: {
+          id: string
+          playlist_started_at: string
+          station_name: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          playlist_started_at?: string
+          station_name?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          playlist_started_at?: string
+          station_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      tracks: {
+        Row: {
+          artist: string
+          created_at: string
+          duration_seconds: number
+          file_url: string
+          id: string
+          play_order: number
+          title: string
+        }
+        Insert: {
+          artist?: string
+          created_at?: string
+          duration_seconds?: number
+          file_url: string
+          id?: string
+          play_order?: number
+          title: string
+        }
+        Update: {
+          artist?: string
+          created_at?: string
+          duration_seconds?: number
+          file_url?: string
+          id?: string
+          play_order?: number
+          title?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
