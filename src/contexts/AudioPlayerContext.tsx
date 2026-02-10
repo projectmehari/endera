@@ -60,6 +60,22 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const { data: liveData, loading: liveLoading, refetch } = useNowPlaying(5000);
+  const hasAutoPlayed = useRef(false);
+
+  // Auto-play live radio on first load
+  useEffect(() => {
+    if (hasAutoPlayed.current || !liveData?.now_playing) return;
+    hasAutoPlayed.current = true;
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.volume = volume;
+    audio.src = liveData.now_playing.file_url;
+    audio.currentTime = liveData.elapsed_seconds;
+    setCurrentLiveUrl(liveData.now_playing.file_url);
+    audio.play().then(() => setIsPlaying(true)).catch(() => {
+      // Browser blocked autoplay — stay in standby
+    });
+  }, [liveData]);
 
   // Sync live track changes
   useEffect(() => {
