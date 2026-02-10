@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowUp, ArrowDown } from "lucide-react";
+import TracklistDialog from "@/components/TracklistDialog";
 import type { Track } from "@/lib/radio-types";
 
 function AdminLogin({ onLogin }: { onLogin: () => void }) {
@@ -68,6 +69,7 @@ function AdminLogin({ onLogin }: { onLogin: () => void }) {
 
 function TrackManager() {
   const [tracks, setTracks] = useState<Track[]>([]);
+  const [tracklistTrack, setTracklistTrack] = useState<Track | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -269,13 +271,22 @@ function TrackManager() {
                       <ArrowDown className="w-3 h-3" />
                     </button>
                     <button onClick={() => deleteTrack(track)} className="p-1 text-muted-foreground hover:text-destructive meter-label">[DEL]</button>
+                    <button onClick={() => setTracklistTrack(track)} className="p-1 text-muted-foreground hover:text-foreground meter-label">[TL]</button>
                   </div>
                 </div>
               ))
             )}
-          </div>
         </div>
+
+        {tracklistTrack && (
+          <TracklistDialog
+            track={tracklistTrack}
+            open={!!tracklistTrack}
+            onOpenChange={(open) => { if (!open) setTracklistTrack(null); }}
+          />
+        )}
       </div>
+    </div>
     </div>
   );
 }
