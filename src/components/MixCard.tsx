@@ -6,34 +6,22 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import type { Track } from "@/lib/radio-types";
+
 function formatDuration(seconds: number) {
   const h = Math.floor(seconds / 3600);
-  const m = Math.floor(seconds % 3600 / 60);
+  const m = Math.floor((seconds % 3600) / 60);
   const s = seconds % 60;
   if (h > 0) return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   return `00:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 }
-export default function MixRow({
-  mix,
-  index
-}: {
-  mix: Track;
-  index: number;
-}) {
+
+export default function MixRow({ mix, index }: { mix: Track; index: number }) {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const {
-    tracks,
-    loading
-  } = useMixTracklist(dialogOpen ? mix.id : null);
-  const {
-    playMix,
-    currentMix,
-    mode,
-    isPlaying,
-    pause,
-    resume
-  } = useAudioPlayer();
+  const { tracks, loading } = useMixTracklist(dialogOpen ? mix.id : null);
+  const { playMix, currentMix, mode, isPlaying, pause, resume } = useAudioPlayer();
+
   const isActive = mode === "mix" && currentMix?.id === mix.id;
+
   const handlePlay = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isActive && isPlaying) {
@@ -50,27 +38,55 @@ export default function MixRow({
         artwork_url: "",
         description: null,
         display_order: mix.play_order,
-        created_at: mix.created_at
+        created_at: mix.created_at,
       });
     }
   };
-  return <>
+
+  return (
+    <>
       <div className="border-b border-muted-foreground/20">
-        <div onClick={() => setDialogOpen(true)} className={`flex items-center px-2 py-4 md:px-4 transition-colors hover:bg-muted/50 cursor-pointer ${isActive ? "bg-muted/60" : ""}`}>
+        <div
+          onClick={() => setDialogOpen(true)}
+          className={`flex items-center px-2 py-4 md:px-4 transition-colors hover:bg-muted/50 cursor-pointer ${
+            isActive ? "bg-muted/60" : ""
+          }`}
+        >
           {/* Play button */}
-          <button onClick={handlePlay} className={`w-8 h-8 flex items-center justify-center shrink-0 rounded-full border transition-colors ${isActive ? "border-foreground text-foreground" : "border-muted-foreground/40 text-muted-foreground hover:border-foreground hover:text-foreground"}`}>
-            {isActive && isPlaying ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" className="ml-0.5" />}
+          <button
+            onClick={handlePlay}
+            className={`w-8 h-8 flex items-center justify-center shrink-0 rounded-full border transition-colors ${
+              isActive
+                ? "border-foreground text-foreground"
+                : "border-muted-foreground/40 text-muted-foreground hover:border-foreground hover:text-foreground"
+            }`}
+          >
+            {isActive && isPlaying ? (
+              <Pause size={14} fill="currentColor" />
+            ) : (
+              <Play size={14} fill="currentColor" className="ml-0.5" />
+            )}
           </button>
 
           {/* Artwork + Number */}
-          {mix.artwork_url && <img src={mix.artwork_url} alt="" className="w-8 h-8 border border-foreground object-cover shrink-0 ml-3" />}
+          {mix.artwork_url && (
+            <img
+              src={mix.artwork_url}
+              alt=""
+              className="w-8 h-8 border border-foreground object-cover shrink-0 ml-3"
+            />
+          )}
           <span className="font-mono text-sm text-muted-foreground w-10 shrink-0 text-right mr-4 ml-3">
             {mix.play_order || index + 1}
           </span>
 
           {/* Title + Artist label */}
           <div className="flex-1 min-w-0">
-            <span className={`font-mono text-sm truncate block ${isActive ? "text-foreground" : "text-muted-foreground"}`}>
+            <span
+              className={`font-mono text-sm truncate block ${
+                isActive ? "text-foreground" : "text-muted-foreground"
+              }`}
+            >
               {mix.title.toLowerCase()}
             </span>
             <span className="font-mono text-[10px] tracking-widest text-muted-foreground/60 uppercase">
@@ -84,7 +100,9 @@ export default function MixRow({
           </span>
         </div>
 
-        {isActive && isPlaying && <div className="h-[2px] bg-foreground" />}
+        {isActive && isPlaying && (
+          <div className="h-[2px] bg-foreground" />
+        )}
       </div>
 
       {/* Detail Dialog */}
@@ -92,7 +110,13 @@ export default function MixRow({
         <DialogContent className="max-w-md border-foreground bg-background p-0 gap-0">
           <DialogTitle className="sr-only">{mix.title}</DialogTitle>
 
-          {mix.artwork_url && <img src={mix.artwork_url} alt={mix.title} className="w-full aspect-square object-cover" />}
+          {mix.artwork_url && (
+            <img
+              src={mix.artwork_url}
+              alt={mix.title}
+              className="w-full aspect-square object-cover"
+            />
+          )}
 
           <div className="px-5 py-4 space-y-3">
             {/* Info + Play */}
@@ -108,29 +132,47 @@ export default function MixRow({
                   {formatDuration(mix.duration_seconds)}
                 </p>
               </div>
-              <button onClick={handlePlay} className={`w-9 h-9 flex items-center justify-center shrink-0 rounded-full border transition-colors ${isActive ? "border-foreground text-foreground" : "border-muted-foreground/40 text-muted-foreground hover:border-foreground hover:text-foreground"}`}>
-                {isActive && isPlaying ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" className="ml-0.5" />}
+              <button
+                onClick={handlePlay}
+                className={`w-9 h-9 flex items-center justify-center shrink-0 rounded-full border transition-colors ${
+                  isActive
+                    ? "border-foreground text-foreground"
+                    : "border-muted-foreground/40 text-muted-foreground hover:border-foreground hover:text-foreground"
+                }`}
+              >
+                {isActive && isPlaying ? (
+                  <Pause size={16} fill="currentColor" />
+                ) : (
+                  <Play size={16} fill="currentColor" className="ml-0.5" />
+                )}
               </button>
             </div>
 
             {/* Tracklist */}
             <Separator className="bg-muted-foreground/20" />
             <ScrollArea className="max-h-60">
-              {loading ? <span className="font-mono text-xs text-muted-foreground">loading…</span> : tracks.length === 0 ? <span className="font-mono text-xs text-muted-foreground">Tracklist: Tonight — Lykke Li // Parody of Crime — Ydegirl // Cupid — Until The Ribbon Breaks // Lung Slide — James K // Sexy Clown — Marie Davidson //  White Carnations — Earth Trax // No Sale Ya Casi la Pobre — GAZZI //  nobody (make me feel) — oskar med k / Khalid // Kiss Land — The Weeknd // 
-Contact – Karen Nyame KG Remix — Kelela / Karen Nyame KG //  world — boy 2000 // All Night — The Dare //  OOH — SOPHIE
-Night — Jimothy Lacoste // BBoy — Fotomachine //  Focus – SE Edit — Dan Kye //  Sunrays — The Other People Place     </span> : <div className="space-y-1.5 pr-3">
-                  {tracks.map(t => <div key={t.id} className="flex items-baseline gap-3 font-mono text-xs text-muted-foreground">
+              {loading ? (
+                <span className="font-mono text-xs text-muted-foreground">loading…</span>
+              ) : tracks.length === 0 ? (
+                <span className="font-mono text-xs text-muted-foreground">no tracklist available</span>
+              ) : (
+                <div className="space-y-1.5 pr-3">
+                  {tracks.map((t) => (
+                    <div key={t.id} className="flex items-baseline gap-3 font-mono text-xs text-muted-foreground">
                       <span className="w-10 shrink-0 text-muted-foreground/60">
                         {t.timestamp_label || String(t.position).padStart(2, "0")}
                       </span>
                       <span className="truncate">
                         {t.track_artist.toLowerCase()} — {t.track_title.toLowerCase()}
                       </span>
-                    </div>)}
-                </div>}
+                    </div>
+                  ))}
+                </div>
+              )}
             </ScrollArea>
           </div>
         </DialogContent>
       </Dialog>
-    </>;
+    </>
+  );
 }
