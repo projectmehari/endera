@@ -5,12 +5,25 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-function verifyToken(token: string): boolean {
+async function verifyToken(token: string): Promise<boolean> {
   try {
-    const decoded = atob(token);
-    const parts = decoded.split(":");
-    if (parts[0] !== "admin") return false;
-    return parts[2] === Deno.env.get("ADMIN_PASSWORD");
+    const parts = token.split(".");
+    if (parts.length !== 3) return false;
+    const payload = JSON.parse(atob(parts[1]));
+    if (payload.sub !== "admin") return false;
+    if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) return false;
+
+    const secret = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const data = `${parts[0]}.${parts[1]}`;
+    const key = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(secret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["verify"]
+    );
+    const sigBytes = Uint8Array.from(atob(parts[2].replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0));
+    return await crypto.subtle.verify("HMAC", key, sigBytes, new TextEncoder().encode(data));
   } catch {
     return false;
   }
@@ -23,7 +36,7 @@ Deno.serve(async (req) => {
 
   try {
     const { token, trackId } = await req.json();
-    if (!verifyToken(token)) {
+    if (!(await verifyToken(token))) {
       return new Response(
         JSON.stringify({ success: false, error: "Unauthorized" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -35,7 +48,6 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Get track to find file URL
     const { data: track } = await supabase
       .from("tracks")
       .select("*")
@@ -43,13 +55,11 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (track) {
-      // Extract file path from URL
       const url = new URL(track.file_url);
       const pathParts = url.pathname.split("/storage/v1/object/public/tracks/");
       if (pathParts[1]) {
         await supabase.storage.from("tracks").remove([decodeURIComponent(pathParts[1])]);
       }
-
       await supabase.from("tracks").delete().eq("id", trackId);
     }
 
@@ -57,9 +67,9 @@ Deno.serve(async (req) => {
       JSON.stringify({ success: true }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (error) {
+  } catch {
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ success: false, error: "An error occurred" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
