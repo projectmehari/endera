@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowUp, ArrowDown } from "lucide-react";
+import { ArrowUp, ArrowDown, Pencil } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import TracklistDialog from "@/components/TracklistDialog";
 import type { Track } from "@/lib/radio-types";
 
@@ -67,9 +68,90 @@ function AdminLogin({ onLogin }: { onLogin: () => void }) {
   );
 }
 
+function EditTrackDialog({
+  track,
+  open,
+  onOpenChange,
+  onSave,
+}: {
+  track: Track;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSave: (fields: { title?: string; artist?: string; artworkUrl?: string }) => Promise<void>;
+}) {
+  const [editTitle, setEditTitle] = useState(track.title);
+  const [editArtist, setEditArtist] = useState(track.artist);
+  const [saving, setSaving] = useState(false);
+  const [artworkFile, setArtworkFile] = useState<File | null>(null);
+
+  useEffect(() => {
+    setEditTitle(track.title);
+    setEditArtist(track.artist);
+    setArtworkFile(null);
+  }, [track]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    const fields: { title?: string; artist?: string; artworkUrl?: string } = {};
+    if (editTitle.trim() !== track.title) fields.title = editTitle.trim();
+    if (editArtist.trim() !== track.artist) fields.artist = editArtist.trim();
+
+    if (artworkFile) {
+      const artworkPath = `${crypto.randomUUID()}-${artworkFile.name}`;
+      const { error } = await supabase.storage.from("artwork").upload(artworkPath, artworkFile, {
+        contentType: artworkFile.type,
+      });
+      if (!error) {
+        const { data } = supabase.storage.from("artwork").getPublicUrl(artworkPath);
+        fields.artworkUrl = data.publicUrl;
+      }
+    }
+
+    if (Object.keys(fields).length > 0) {
+      await onSave(fields);
+    } else {
+      onOpenChange(false);
+    }
+    setSaving(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-sm border-foreground bg-background p-0 gap-0">
+        <DialogTitle className="px-4 py-3 border-b border-foreground meter-label">EDIT TRACK</DialogTitle>
+        <div className="p-4 space-y-3">
+          <div>
+            <Label className="meter-label">TITLE</Label>
+            <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="mt-1 font-mono text-xs" />
+          </div>
+          <div>
+            <Label className="meter-label">ARTIST</Label>
+            <Input value={editArtist} onChange={(e) => setEditArtist(e.target.value)} className="mt-1 font-mono text-xs" />
+          </div>
+          <div>
+            <Label className="meter-label">REPLACE ARTWORK</Label>
+            {track.artwork_url && (
+              <img src={track.artwork_url} alt="" className="w-12 h-12 border border-foreground object-cover mt-1 mb-1" />
+            )}
+            <Input type="file" accept="image/*" onChange={(e) => setArtworkFile(e.target.files?.[0] || null)} className="mt-1 font-mono text-xs" />
+          </div>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="w-full meter-panel px-4 py-2 meter-value text-xs hover:bg-foreground hover:text-background transition-colors disabled:opacity-50"
+          >
+            {saving ? "SAVING..." : "SAVE CHANGES"}
+          </button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function TrackManager() {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [tracklistTrack, setTracklistTrack] = useState<Track | null>(null);
+  const [editTrack, setEditTrack] = useState<Track | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -181,6 +263,14 @@ function TrackManager() {
     if (!error && data?.success) { toast({ title: "DATE UPDATED" }); fetchTracks(); }
   };
 
+  const updateTrackMeta = async (trackId: string, fields: { title?: string; artist?: string; artworkUrl?: string }) => {
+    const { data, error } = await supabase.functions.invoke("admin-update-track", {
+      body: { token, trackId, ...fields },
+    });
+    if (!error && data?.success) { toast({ title: "TRACK UPDATED" }); fetchTracks(); }
+    else { toast({ title: "UPDATE FAILED", variant: "destructive" }); }
+  };
+
   const logout = () => { sessionStorage.removeItem("admin_token"); window.location.reload(); };
 
   return (
@@ -290,6 +380,7 @@ function TrackManager() {
                     </button>
                     <button onClick={() => deleteTrack(track)} className="p-1 text-muted-foreground hover:text-destructive meter-label">[DEL]</button>
                     <button onClick={() => setTracklistTrack(track)} className="p-1 text-muted-foreground hover:text-foreground meter-label">[TL]</button>
+                    <button onClick={() => setEditTrack(track)} className="p-1 text-muted-foreground hover:text-foreground"><Pencil className="w-3 h-3" /></button>
                   </div>
                 </div>
               ))
@@ -301,6 +392,18 @@ function TrackManager() {
             track={tracklistTrack}
             open={!!tracklistTrack}
             onOpenChange={(open) => { if (!open) setTracklistTrack(null); }}
+          />
+        )}
+
+        {editTrack && (
+          <EditTrackDialog
+            track={editTrack}
+            open={!!editTrack}
+            onOpenChange={(open) => { if (!open) setEditTrack(null); }}
+            onSave={async (fields) => {
+              await updateTrackMeta(editTrack.id, fields);
+              setEditTrack(null);
+            }}
           />
         )}
       </div>
