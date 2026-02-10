@@ -14,6 +14,80 @@ export type Database = {
   }
   public: {
     Tables: {
+      mix_tracklists: {
+        Row: {
+          created_at: string
+          id: string
+          mix_id: string
+          position: number
+          timestamp_label: string | null
+          track_artist: string
+          track_title: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mix_id: string
+          position: number
+          timestamp_label?: string | null
+          track_artist?: string
+          track_title: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mix_id?: string
+          position?: number
+          timestamp_label?: string | null
+          track_artist?: string
+          track_title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mix_tracklists_mix_id_fkey"
+            columns: ["mix_id"]
+            isOneToOne: false
+            referencedRelation: "mixes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mixes: {
+        Row: {
+          artist: string
+          artwork_url: string
+          created_at: string
+          description: string | null
+          display_order: number
+          duration_seconds: number
+          file_url: string
+          id: string
+          title: string
+        }
+        Insert: {
+          artist?: string
+          artwork_url: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          duration_seconds?: number
+          file_url: string
+          id?: string
+          title: string
+        }
+        Update: {
+          artist?: string
+          artwork_url?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          duration_seconds?: number
+          file_url?: string
+          id?: string
+          title?: string
+        }
+        Relationships: []
+      }
       station_config: {
         Row: {
           id: string
