@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMixTracklist } from "@/hooks/useMixes";
 import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
+import { Play, Pause } from "lucide-react";
 import type { Track } from "@/lib/radio-types";
 
 function formatDuration(seconds: number) {
@@ -14,49 +15,79 @@ function formatDuration(seconds: number) {
 export default function MixRow({ mix, index }: { mix: Track; index: number }) {
   const [expanded, setExpanded] = useState(false);
   const { tracks, loading } = useMixTracklist(expanded ? mix.id : null);
-  const { playMix, currentMix, mode, isPlaying } = useAudioPlayer();
+  const { playMix, currentMix, mode, isPlaying, pause, resume } = useAudioPlayer();
 
   const isActive = mode === "mix" && currentMix?.id === mix.id;
 
-  // Adapt Track to the shape playMix expects
-  const handlePlay = () => {
-    playMix({
-      id: mix.id,
-      title: mix.title,
-      artist: mix.artist,
-      file_url: mix.file_url,
-      duration_seconds: mix.duration_seconds,
-      artwork_url: "",
-      description: null,
-      display_order: mix.play_order,
-      created_at: mix.created_at,
-    });
+  const handlePlay = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isActive && isPlaying) {
+      pause();
+    } else if (isActive) {
+      resume();
+    } else {
+      playMix({
+        id: mix.id,
+        title: mix.title,
+        artist: mix.artist,
+        file_url: mix.file_url,
+        duration_seconds: mix.duration_seconds,
+        artwork_url: "",
+        description: null,
+        display_order: mix.play_order,
+        created_at: mix.created_at,
+      });
+    }
   };
 
   return (
     <div className="border-b border-muted-foreground/20">
       <div
-        className={`flex items-center px-2 py-4 md:px-4 cursor-pointer transition-colors hover:bg-muted/50 ${
+        className={`flex items-center px-2 py-4 md:px-4 transition-colors hover:bg-muted/50 ${
           isActive ? "bg-muted/60" : ""
         }`}
-        onClick={handlePlay}
       >
-        <span className="font-mono text-sm text-muted-foreground w-12 shrink-0">
+        {/* Play button */}
+        <button
+          onClick={handlePlay}
+          className={`w-8 h-8 flex items-center justify-center shrink-0 rounded-full border transition-colors ${
+            isActive
+              ? "border-foreground text-foreground"
+              : "border-muted-foreground/40 text-muted-foreground hover:border-foreground hover:text-foreground"
+          }`}
+        >
+          {isActive && isPlaying ? (
+            <Pause size={14} fill="currentColor" />
+          ) : (
+            <Play size={14} fill="currentColor" className="ml-0.5" />
+          )}
+        </button>
+
+        {/* Number */}
+        <span className="font-mono text-sm text-muted-foreground w-10 shrink-0 text-right mr-4 ml-3">
           {mix.play_order || index + 1}
         </span>
 
-        <span
-          className={`flex-1 min-w-0 font-mono text-sm truncate ${
-            isActive ? "text-foreground" : "text-muted-foreground"
-          }`}
-        >
-          {mix.title.toLowerCase()}
-        </span>
+        {/* Title + Artist label */}
+        <div className="flex-1 min-w-0">
+          <span
+            className={`font-mono text-sm truncate block ${
+              isActive ? "text-foreground" : "text-muted-foreground"
+            }`}
+          >
+            {mix.title.toLowerCase()}
+          </span>
+          <span className="font-mono text-[10px] tracking-widest text-muted-foreground/60 uppercase">
+            {mix.artist}
+          </span>
+        </div>
 
+        {/* Duration */}
         <span className="font-mono text-sm text-muted-foreground shrink-0 ml-4">
           {formatDuration(mix.duration_seconds)}
         </span>
 
+        {/* Expand chevron */}
         <button
           onClick={(e) => {
             e.stopPropagation();
