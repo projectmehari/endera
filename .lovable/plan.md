@@ -1,79 +1,53 @@
 
-# Volume Controls, Seek, Live Indicator, and Artwork Upload
+# Track Detail View with Larger Artwork
 
-This plan covers four changes: playback controls (volume + seek), a flashing red LIVE dot, sort controls in admin, and artwork image support.
-
----
-
-## 1. Volume Control + Seek (Forward/Back)
-
-### LiveBar changes (`src/components/LiveBar.tsx`)
-- Add a volume slider using the existing Radix `Slider` component, placed next to the play/pause button.
-- Add seek forward/back buttons (10-second skip) using `SkipBack` and `SkipForward` icons from lucide-react. These are enabled in both live and mix modes.
-
-### AudioPlayerContext changes (`src/contexts/AudioPlayerContext.tsx`)
-- Expose `volume`, `setVolume(v)`, and `seek(seconds)` methods.
-- `setVolume` sets `audioRef.current.volume`.
-- `seek` adjusts `audioRef.current.currentTime` by the given delta (clamped to 0 and duration).
+Replace the current inline expand (chevron) with a dialog/modal that opens when you click on a track row. The modal shows a large artwork image, track metadata, and the full tracklist.
 
 ---
 
-## 2. Flashing Red LIVE Dot
+## Changes
 
-### CSS changes (`src/index.css`)
-- Update `.meter-dot-active` to use a red color (`hsl(0 70% 50%)`) with a pulsing animation.
-- Add a `@keyframes live-pulse` animation that fades the dot opacity and box-shadow.
+### MixCard.tsx (`src/components/MixCard.tsx`)
 
-### LiveBar (`src/components/LiveBar.tsx`)
-- The existing `meter-dot-active` class already applies when live and playing. The CSS change will make it flash red automatically.
+- Remove the expand chevron button and the inline expanded tracklist section.
+- Make the track row itself clickable (excluding the play button) to open a detail dialog.
+- Add a `Dialog` from the existing Radix dialog component (`@/components/ui/dialog`).
+- The dialog contains:
+  - **Large artwork**: The track's `artwork_url` displayed prominently at ~300x300px with `aspect-ratio: 1/1` and `object-cover`. Falls back to a placeholder or is hidden if no artwork exists.
+  - **Track info**: Title, artist (DJ label), duration -- styled in the existing mono/meter aesthetic.
+  - **Play button**: A play/pause button within the detail view.
+  - **Tracklist**: Fetched via the existing `useMixTracklist` hook (loaded when dialog opens by passing `mix.id` when open). Displayed as a numbered list with timestamps and artist/title.
+- The `useMixTracklist` hook trigger changes from `expanded` boolean to the dialog open state.
 
----
+### LiveBar.tsx (`src/components/LiveBar.tsx`)
 
-## 3. Admin: Sort Tracks (Oldest to Newest)
+- Make the artwork thumbnail in the LiveBar clickable. Currently it's a static `<img>`. Wrap it so clicking opens the same detail dialog for the currently playing track (mix mode only -- not applicable in live mode since live tracks use the `tracks` table, not `mixes`).
+- For simplicity, clicking the artwork in mix mode could scroll to / highlight the track in the feed rather than opening a separate dialog. Alternatively, a small dialog approach works too.
 
-### Admin page changes (`src/pages/Admin.tsx`)
-- Add a sort toggle button (e.g., "SORT: NEWEST FIRST" / "SORT: OLDEST FIRST") above the playlist.
-- This toggles a local state that controls the `order` direction in the Supabase query or simply reverses the local array.
-- This is a display-only sort -- it does not change `play_order` values.
-
----
-
-## 4. Artwork Image Upload + Display
-
-### Database migration
-- Add an `artwork_url` column (text, nullable, default null) to the `tracks` table.
-
-### Storage
-- A public `artwork` storage bucket will be created for the images.
-
-### Admin upload form (`src/pages/Admin.tsx`)
-- Add an image file input field (accept `image/*`) below the MP3 field.
-- On upload, the image is uploaded to the `artwork` storage bucket, and its public URL is passed to the `admin-upload` edge function.
-
-### Edge function (`supabase/functions/admin-upload/index.ts`)
-- Accept an optional `artworkUrl` parameter.
-- Include `artwork_url` in the track insert.
-
-### Track type (`src/lib/radio-types.ts`)
-- Add `artwork_url: string | null` to the `Track` interface.
-
-### LiveBar (`src/components/LiveBar.tsx`)
-- When a track has `artwork_url`, show a small thumbnail (24x24) next to the track title, in both live and mix modes.
-
-### MixCard (`src/components/MixCard.tsx`)
-- Show the artwork thumbnail next to the track title in each archive row.
+For a clean implementation, the detail dialog will live inside `MixCard.tsx` only (one per row), triggered by clicking the row.
 
 ---
 
-## Files Summary
+## Technical Details
 
-| File | Action |
+### Dialog structure in MixCard.tsx
+
+```
+Dialog (open state controlled by local useState)
+  DialogContent (max-w-md, styled with bg-background border-foreground)
+    - artwork image (w-full max-h-80 object-cover)
+    - title + artist + duration
+    - play/pause button
+    - separator
+    - tracklist (ScrollArea for long lists)
+```
+
+### Hook usage
+- `useMixTracklist(dialogOpen ? mix.id : null)` -- only fetches when dialog is open.
+
+### Files modified
+| File | Change |
 |------|--------|
-| `src/index.css` | Add live-pulse keyframes, update meter-dot-active to red |
-| `src/contexts/AudioPlayerContext.tsx` | Add volume, setVolume, seek |
-| `src/components/LiveBar.tsx` | Add volume slider, seek buttons, artwork thumbnail |
-| `src/components/MixCard.tsx` | Add artwork thumbnail |
-| `src/lib/radio-types.ts` | Add artwork_url to Track |
-| `src/pages/Admin.tsx` | Add artwork upload field, sort toggle |
-| `supabase/functions/admin-upload/index.ts` | Accept artworkUrl param |
-| Database migration | Add artwork_url column to tracks, create artwork bucket |
+| `src/components/MixCard.tsx` | Replace chevron expand with row-click dialog showing large artwork + tracklist |
+
+No database or backend changes needed -- all data already exists.
