@@ -5,6 +5,7 @@ export interface Track {
   duration_seconds: number;
   file_url: string;
   play_order: number;
+  artwork_url: string | null;
   created_at: string;
 }
 

@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -74,7 +73,9 @@ function TrackManager() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [title, setTitle] = useState("");
   const [artist, setArtist] = useState("");
+  const [sortAsc, setSortAsc] = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
+  const artworkRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const token = sessionStorage.getItem("admin_token") || "";
 
@@ -82,12 +83,12 @@ function TrackManager() {
     const { data } = await supabase
       .from("tracks" as any)
       .select("*")
-      .order("play_order", { ascending: true });
+      .order("play_order", { ascending: sortAsc });
     setTracks((data as unknown as Track[]) || []);
     setLoading(false);
   };
 
-  useEffect(() => { fetchTracks(); }, []);
+  useEffect(() => { fetchTracks(); }, [sortAsc]);
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,7 +97,7 @@ function TrackManager() {
     setUploading(true);
     setUploadProgress(0);
     try {
-      // Upload file via XMLHttpRequest for progress tracking
+      // Upload MP3
       const filePath = `${crypto.randomUUID()}-${file.name}`;
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -108,11 +109,8 @@ function TrackManager() {
         xhr.setRequestHeader("apikey", supabaseKey);
         xhr.setRequestHeader("Content-Type", file.type || "audio/mpeg");
         xhr.setRequestHeader("x-upsert", "false");
-
         xhr.upload.onprogress = (e) => {
-          if (e.lengthComputable) {
-            setUploadProgress(Math.round((e.loaded / e.total) * 100));
-          }
+          if (e.lengthComputable) setUploadProgress(Math.round((e.loaded / e.total) * 90));
         };
         xhr.onload = () => {
           if (xhr.status >= 200 && xhr.status < 300) resolve();
@@ -122,20 +120,33 @@ function TrackManager() {
         xhr.send(file);
       });
 
-      // Get public URL
       const { data: urlData } = supabase.storage.from("tracks").getPublicUrl(filePath);
 
-      // Estimate duration: fileSize / ~24000 bytes per second (192kbps)
+      // Upload artwork if provided
+      let artworkUrl: string | undefined;
+      const artworkFile = artworkRef.current?.files?.[0];
+      if (artworkFile) {
+        const artworkPath = `${crypto.randomUUID()}-${artworkFile.name}`;
+        const { error: artErr } = await supabase.storage.from("artwork").upload(artworkPath, artworkFile, {
+          contentType: artworkFile.type,
+        });
+        if (!artErr) {
+          const { data: artUrlData } = supabase.storage.from("artwork").getPublicUrl(artworkPath);
+          artworkUrl = artUrlData.publicUrl;
+        }
+        setUploadProgress(95);
+      }
+
       const durationSeconds = Math.round(file.size / 24000);
 
-      // Use edge function to insert track record (admin-verified)
       const { data, error } = await supabase.functions.invoke("admin-upload", {
-        body: { token, title, artist: artist || "Unknown", fileUrl: urlData.publicUrl, durationSeconds },
+        body: { token, title, artist: artist || "Unknown", fileUrl: urlData.publicUrl, durationSeconds, artworkUrl },
       });
       if (error || !data?.success) throw new Error(data?.error || "Upload failed");
       toast({ title: "TRACK UPLOADED" });
       setTitle(""); setArtist("");
       if (fileRef.current) fileRef.current.value = "";
+      if (artworkRef.current) artworkRef.current.value = "";
       fetchTracks();
     } catch (err: any) {
       toast({ title: "UPLOAD FAILED", description: err.message, variant: "destructive" });
@@ -196,6 +207,10 @@ function TrackManager() {
               <Label className="meter-label">MP3 FILE *</Label>
               <Input ref={fileRef} type="file" accept="audio/mpeg,audio/mp3" className="mt-1 font-mono text-xs" required />
             </div>
+            <div>
+              <Label className="meter-label">ARTWORK IMAGE (OPTIONAL)</Label>
+              <Input ref={artworkRef} type="file" accept="image/*" className="mt-1 font-mono text-xs" />
+            </div>
             {uploading && (
               <div className="space-y-1">
                 <div className="flex items-center justify-between">
@@ -203,10 +218,7 @@ function TrackManager() {
                   <span className="meter-label text-foreground">{uploadProgress}%</span>
                 </div>
                 <div className="h-[3px] bg-muted w-full">
-                  <div
-                    className="h-full bg-foreground transition-all duration-200"
-                    style={{ width: `${uploadProgress}%` }}
-                  />
+                  <div className="h-full bg-foreground transition-all duration-200" style={{ width: `${uploadProgress}%` }} />
                 </div>
               </div>
             )}
@@ -220,7 +232,15 @@ function TrackManager() {
         <div className="meter-panel">
           <div className="border-b border-foreground px-4 py-2 flex items-center justify-between">
             <span className="meter-label">— PLAYLIST —</span>
-            <span className="meter-label">{tracks.length} TRACKS</span>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setSortAsc(!sortAsc)}
+                className="meter-label hover:text-foreground transition-colors"
+              >
+                [{sortAsc ? "OLDEST → NEWEST" : "NEWEST → OLDEST"}]
+              </button>
+              <span className="meter-label">{tracks.length} TRACKS</span>
+            </div>
           </div>
           <div className="p-2">
             {loading ? (
@@ -231,6 +251,9 @@ function TrackManager() {
               tracks.map((track, i) => (
                 <div key={track.id} className="flex items-center gap-2 py-1.5 px-2 receipt-line last:border-0 group hover:bg-secondary transition-colors">
                   <span className="meter-label text-foreground w-5 text-right">{String(i + 1).padStart(2, "0")}</span>
+                  {track.artwork_url && (
+                    <img src={track.artwork_url} alt="" className="w-6 h-6 border border-foreground object-cover shrink-0" />
+                  )}
                   <div className="flex-1 min-w-0">
                     <span className="text-xs font-mono uppercase truncate block">{track.title}</span>
                     <span className="meter-label">{track.artist.toUpperCase()}</span>

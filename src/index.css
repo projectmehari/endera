@@ -110,8 +110,14 @@
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: hsl(0 0% 8%);
-    box-shadow: 0 0 4px hsl(0 0% 8% / 0.5);
+    background: hsl(0 70% 50%);
+    box-shadow: 0 0 6px hsl(0 70% 50% / 0.6);
+    animation: live-pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes live-pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 6px hsl(0 70% 50% / 0.6); }
+    50% { opacity: 0.4; box-shadow: 0 0 2px hsl(0 70% 50% / 0.2); }
   }
 
   .meter-dot-off {

@@ -63,7 +63,14 @@ export default function MixRow({ mix, index }: { mix: Track; index: number }) {
           )}
         </button>
 
-        {/* Number */}
+        {/* Artwork + Number */}
+        {mix.artwork_url && (
+          <img
+            src={mix.artwork_url}
+            alt=""
+            className="w-8 h-8 border border-foreground object-cover shrink-0 ml-3"
+          />
+        )}
         <span className="font-mono text-sm text-muted-foreground w-10 shrink-0 text-right mr-4 ml-3">
           {mix.play_order || index + 1}
         </span>

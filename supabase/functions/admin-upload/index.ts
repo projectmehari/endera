@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { token, title, artist, fileUrl, durationSeconds } = await req.json();
+    const { token, title, artist, fileUrl, durationSeconds, artworkUrl } = await req.json();
 
     if (!(await verifyToken(token))) {
       return new Response(
@@ -73,13 +73,18 @@ Deno.serve(async (req) => {
 
     const nextOrder = maxOrderData && maxOrderData.length > 0 ? maxOrderData[0].play_order + 1 : 0;
 
-    const { error: insertError } = await supabase.from("tracks").insert({
+    const insertData: Record<string, unknown> = {
       title: title.trim(),
       artist: (artist || "Unknown").trim(),
       duration_seconds: durationSeconds || 0,
       file_url: fileUrl,
       play_order: nextOrder,
-    });
+    };
+    if (artworkUrl && typeof artworkUrl === "string" && artworkUrl.startsWith("https://")) {
+      insertData.artwork_url = artworkUrl;
+    }
+
+    const { error: insertError } = await supabase.from("tracks").insert(insertData);
 
     if (insertError) {
       console.error("Insert error:", insertError);

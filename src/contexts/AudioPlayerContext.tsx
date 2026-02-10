@@ -19,12 +19,15 @@ interface AudioPlayerContextValue {
   liveData: NowPlayingResponse | null;
   liveLoading: boolean;
   mixElapsed: number;
+  volume: number;
   playLive: () => void;
   playMix: (mix: Mix) => void;
   pause: () => void;
   resume: () => void;
   togglePlay: () => void;
   skipTrack: () => Promise<void>;
+  setVolume: (v: number) => void;
+  seek: (delta: number) => void;
 }
 
 const AudioPlayerContext = createContext<AudioPlayerContextValue | null>(null);
@@ -42,6 +45,19 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   const [currentMix, setCurrentMix] = useState<Mix | null>(null);
   const [mixElapsed, setMixElapsed] = useState(0);
   const [currentLiveUrl, setCurrentLiveUrl] = useState<string | null>(null);
+  const [volume, setVolumeState] = useState(1);
+
+  const setVolume = useCallback((v: number) => {
+    const clamped = Math.max(0, Math.min(1, v));
+    setVolumeState(clamped);
+    if (audioRef.current) audioRef.current.volume = clamped;
+  }, []);
+
+  const seek = useCallback((delta: number) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.currentTime = Math.max(0, Math.min(audio.duration || 0, audio.currentTime + delta));
+  }, []);
 
   const { data: liveData, loading: liveLoading, refetch } = useNowPlaying(5000);
 
@@ -171,12 +187,15 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
         liveData,
         liveLoading,
         mixElapsed,
+        volume,
         playLive,
         playMix,
         pause,
         resume,
         togglePlay,
         skipTrack,
+        setVolume,
+        seek,
       }}
     >
       {children}
