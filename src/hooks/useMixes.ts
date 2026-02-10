@@ -1,18 +1,18 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import type { Mix, MixTracklistEntry } from "@/lib/radio-types";
+import type { Track, MixTracklistEntry } from "@/lib/radio-types";
 
 export function useMixes() {
-  const [mixes, setMixes] = useState<Mix[]>([]);
+  const [mixes, setMixes] = useState<Track[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetch() {
       const { data } = await supabase
-        .from("mixes")
+        .from("tracks")
         .select("*")
-        .order("display_order", { ascending: true });
-      setMixes((data as Mix[]) || []);
+        .order("play_order", { ascending: true });
+      setMixes((data as Track[]) || []);
       setLoading(false);
     }
     fetch();
