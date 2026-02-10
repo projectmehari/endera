@@ -7,8 +7,8 @@ function formatDuration(seconds: number) {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   const s = seconds % 60;
-  if (h > 0) return `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
-  return `${m}:${s.toString().padStart(2, "0")}`;
+  if (h > 0) return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  return `00:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 }
 
 export default function MixRow({ mix, index }: { mix: Mix; index: number }) {
@@ -19,113 +19,91 @@ export default function MixRow({ mix, index }: { mix: Mix; index: number }) {
   const isActive = mode === "mix" && currentMix?.id === mix.id;
 
   return (
-    <div
-      className={`border-b border-foreground transition-colors ${
-        isActive ? "bg-foreground text-background" : ""
-      }`}
-    >
-      {/* Main row */}
-      <div className="flex items-center gap-3 px-4 py-3">
+    <div className="border-b border-muted-foreground/20">
+      {/* Main row — clickable to play */}
+      <div
+        className={`flex items-center px-2 py-4 md:px-4 cursor-pointer transition-colors hover:bg-muted/50 ${
+          isActive ? "bg-muted/60" : ""
+        }`}
+        onClick={() => playMix(mix)}
+      >
         {/* Number */}
-        <span
-          className={`meter-label w-6 shrink-0 ${
-            isActive ? "text-background" : "text-foreground"
-          }`}
-        >
-          {String(index + 1).padStart(2, "0")}
+        <span className="font-mono text-sm text-muted-foreground w-12 shrink-0">
+          {mix.display_order || index + 1}
         </span>
 
-        {/* Title + Artist */}
-        <button
-          onClick={() => playMix(mix)}
-          className="flex-1 min-w-0 text-left"
-        >
-          <span
-            className={`meter-value text-sm truncate block ${
-              isActive ? "text-background" : ""
-            }`}
-          >
-            {mix.title}
-          </span>
-          <span
-            className={`meter-label mt-0.5 block ${
-              isActive ? "text-background/60" : ""
-            }`}
-          >
-            {mix.artist.toUpperCase()}
-          </span>
-        </button>
-
-        {/* Duration */}
+        {/* Title */}
         <span
-          className={`meter-label shrink-0 ${
-            isActive ? "text-background/60" : "text-foreground"
+          className={`flex-1 min-w-0 font-mono text-sm truncate ${
+            isActive ? "text-foreground" : "text-muted-foreground"
           }`}
         >
+          {mix.title.toLowerCase()}
+        </span>
+
+        {/* Duration */}
+        <span className="font-mono text-sm text-muted-foreground shrink-0 ml-4">
           {formatDuration(mix.duration_seconds)}
         </span>
 
-        {/* Play / Now Playing indicator */}
-        <button
-          onClick={() => playMix(mix)}
-          className={`shrink-0 meter-value text-xs px-2 py-1 transition-colors ${
-            isActive
-              ? "text-background"
-              : "meter-panel hover:bg-foreground hover:text-background"
-          }`}
-        >
-          {isActive && isPlaying ? "◼" : "▶"}
-        </button>
-
-        {/* Expand tracklist */}
+        {/* Expand chevron */}
         <button
           onClick={(e) => {
             e.stopPropagation();
             setExpanded(!expanded);
           }}
-          className={`shrink-0 meter-label transition-colors ${
-            isActive ? "text-background/60 hover:text-background" : "hover:text-foreground"
-          }`}
+          className="ml-4 text-muted-foreground hover:text-foreground transition-colors shrink-0"
         >
-          {expanded ? "▾" : "▸"}
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            fill="none"
+            className={`transition-transform ${expanded ? "rotate-180" : ""}`}
+          >
+            <path
+              d="M4 6L8 10L12 6"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
         </button>
       </div>
 
+      {/* Now-playing indicator */}
+      {isActive && isPlaying && (
+        <div className="h-[2px] bg-foreground" />
+      )}
+
       {/* Tracklist */}
       {expanded && (
-        <div
-          className={`px-4 pb-3 pl-12 ${
-            isActive ? "border-t border-background/20" : "border-t border-foreground/20"
-          }`}
-        >
+        <div className="px-2 md:px-4 pb-4 pl-14">
           {loading ? (
-            <span className={`meter-label ${isActive ? "text-background/60" : ""}`}>
-              LOADING…
+            <span className="font-mono text-xs text-muted-foreground">
+              loading…
             </span>
           ) : tracks.length === 0 ? (
-            <span className={`meter-label ${isActive ? "text-background/60" : ""}`}>
-              NO TRACKLIST AVAILABLE
+            <span className="font-mono text-xs text-muted-foreground">
+              no tracklist available
             </span>
           ) : (
-            tracks.map((t) => (
-              <div
-                key={t.id}
-                className={`flex items-baseline gap-2 py-0.5 ${
-                  isActive ? "text-background/80" : ""
-                }`}
-              >
-                <span
-                  className={`meter-label w-8 shrink-0 ${
-                    isActive ? "text-background/50" : "text-foreground"
-                  }`}
+            <div className="space-y-1">
+              {tracks.map((t) => (
+                <div
+                  key={t.id}
+                  className="flex items-baseline gap-3 font-mono text-xs text-muted-foreground"
                 >
-                  {t.timestamp_label || String(t.position).padStart(2, "0")}
-                </span>
-                <span className="text-xs font-mono uppercase truncate">
-                  {t.track_artist} — {t.track_title}
-                </span>
-              </div>
-            ))
+                  <span className="w-10 shrink-0 text-muted-foreground/60">
+                    {t.timestamp_label || String(t.position).padStart(2, "0")}
+                  </span>
+                  <span className="truncate">
+                    {t.track_artist.toLowerCase()} — {t.track_title.toLowerCase()}
+                  </span>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}

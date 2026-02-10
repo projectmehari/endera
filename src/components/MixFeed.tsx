@@ -6,17 +6,16 @@ export default function MixFeed() {
 
   return (
     <section>
-      <div className="meter-label mb-4">— ARCHIVE —</div>
       {loading ? (
-        <div className="meter-value text-sm text-muted-foreground">
-          LOADING<span className="animate-blink">_</span>
+        <div className="font-mono text-sm text-muted-foreground py-8 text-center">
+          loading<span className="animate-blink">_</span>
         </div>
       ) : mixes.length === 0 ? (
-        <div className="meter-panel p-6 text-center">
-          <span className="meter-label">NO MIXES AVAILABLE YET</span>
+        <div className="font-mono text-sm text-muted-foreground py-8 text-center">
+          no mixes available yet
         </div>
       ) : (
-        <div className="meter-panel border-t-0">
+        <div className="border-t border-muted-foreground/20">
           {mixes.map((mix, i) => (
             <MixRow key={mix.id} mix={mix} index={i} />
           ))}
