@@ -21,3 +21,25 @@ export interface NowPlayingResponse {
   elapsed_seconds: number;
   total_tracks: number;
 }
+
+export interface Mix {
+  id: string;
+  title: string;
+  artist: string;
+  artwork_url: string;
+  file_url: string;
+  duration_seconds: number;
+  description: string | null;
+  display_order: number;
+  created_at: string;
+}
+
+export interface MixTracklistEntry {
+  id: string;
+  mix_id: string;
+  position: number;
+  track_title: string;
+  track_artist: string;
+  timestamp_label: string | null;
+  created_at: string;
+}
