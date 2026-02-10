@@ -47,7 +47,7 @@ export type Database = {
             foreignKeyName: "mix_tracklists_mix_id_fkey"
             columns: ["mix_id"]
             isOneToOne: false
-            referencedRelation: "mixes"
+            referencedRelation: "tracks"
             referencedColumns: ["id"]
           },
         ]
