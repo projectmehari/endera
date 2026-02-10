@@ -130,6 +130,11 @@ export default function MixRow({ mix, index, total }: { mix: Track; index: numbe
                 </p>
                 <p className="font-mono text-xs text-muted-foreground mt-1">
                   {formatDuration(mix.duration_seconds)}
+                  {mix.published_date && (
+                    <span className="ml-3 text-muted-foreground/60">
+                      {new Date(mix.published_date + "T00:00:00").toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
+                    </span>
+                  )}
                 </p>
               </div>
               <button
