@@ -17,7 +17,7 @@ export default function MixFeed() {
       ) : (
         <div className="border-t border-muted-foreground/20">
           {mixes.map((mix, i) => (
-            <MixRow key={mix.id} mix={mix} index={i} />
+            <MixRow key={mix.id} mix={mix} index={i} total={mixes.length} />
           ))}
         </div>
       )}

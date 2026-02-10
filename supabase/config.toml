@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.admin-tracklist]
 verify_jwt = false
+
+[functions.admin-update-track]
+verify_jwt = false

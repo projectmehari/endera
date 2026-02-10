@@ -11,7 +11,7 @@ export function useMixes() {
       const { data } = await supabase
         .from("tracks")
         .select("*")
-        .order("play_order", { ascending: true });
+        .order("published_date", { ascending: false });
       setMixes((data as Track[]) || []);
       setLoading(false);
     }

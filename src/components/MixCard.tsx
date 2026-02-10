@@ -15,7 +15,7 @@ function formatDuration(seconds: number) {
   return `00:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 }
 
-export default function MixRow({ mix, index }: { mix: Track; index: number }) {
+export default function MixRow({ mix, index, total }: { mix: Track; index: number; total: number }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const { tracks, loading } = useMixTracklist(dialogOpen ? mix.id : null);
   const { playMix, currentMix, mode, isPlaying, pause, resume } = useAudioPlayer();
@@ -77,7 +77,7 @@ export default function MixRow({ mix, index }: { mix: Track; index: number }) {
             />
           )}
           <span className="font-mono text-sm text-muted-foreground w-10 shrink-0 text-right mr-4 ml-3">
-            {mix.play_order || index + 1}
+            {String(total - index).padStart(3, "0")}
           </span>
 
           {/* Title + Artist label */}

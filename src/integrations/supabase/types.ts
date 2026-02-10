@@ -118,6 +118,7 @@ export type Database = {
           file_url: string
           id: string
           play_order: number
+          published_date: string | null
           title: string
         }
         Insert: {
@@ -128,6 +129,7 @@ export type Database = {
           file_url: string
           id?: string
           play_order?: number
+          published_date?: string | null
           title: string
         }
         Update: {
@@ -138,6 +140,7 @@ export type Database = {
           file_url?: string
           id?: string
           play_order?: number
+          published_date?: string | null
           title?: string
         }
         Relationships: []
