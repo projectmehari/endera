@@ -159,7 +159,7 @@ export default function MixRow({ mix, index }: { mix: Track; index: number }) {
                 <div className="space-y-1.5 pr-3">
                   {tracks.map((t) => (
                     <div key={t.id} className="flex items-baseline gap-3 font-mono text-xs text-muted-foreground">
-                      <span className="w-10 shrink-0 text-muted-foreground/60">
+                      <span className="w-[4.5rem] shrink-0 text-muted-foreground/60">
                         {t.timestamp_label
                           ? t.timestamp_label.replace(/\b(\d)\b/g, "0$1")
                           : String(t.position).padStart(2, "0")}
