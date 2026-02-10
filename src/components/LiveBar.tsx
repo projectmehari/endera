@@ -102,16 +102,20 @@ export default function LiveBar() {
 
           {/* Progress */}
           {hasTrack && (
-            <div className="hidden md:flex items-center gap-2 shrink-0 w-48">
+            <div className="hidden md:flex items-center gap-2 shrink-0 w-56">
               <span className="meter-label text-foreground text-[8px]">
                 {formatTime(elapsed)}
               </span>
-              <div className="flex-1 h-[2px] bg-muted relative">
-                <div
-                  className="h-full bg-foreground transition-all duration-1000"
-                  style={{ width: `${Math.min(progress, 100)}%` }}
-                />
-              </div>
+              <Slider
+                value={[elapsed]}
+                max={duration || 1}
+                step={1}
+                onValueChange={([v]) => {
+                  const audio = document.querySelector('audio');
+                  if (audio) audio.currentTime = v;
+                }}
+                className="flex-1 [&_[role=slider]]:h-2.5 [&_[role=slider]]:w-2.5 [&_[role=slider]]:border-foreground [&_.relative]:h-[2px]"
+              />
               <span className="meter-label text-foreground text-[8px]">
                 {formatTime(duration)}
               </span>
