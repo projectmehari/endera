@@ -75,6 +75,7 @@ function TrackManager() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [title, setTitle] = useState("");
   const [artist, setArtist] = useState("");
+  const [publishedDate, setPublishedDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [sortAsc, setSortAsc] = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
   const artworkRef = useRef<HTMLInputElement>(null);
@@ -85,7 +86,7 @@ function TrackManager() {
     const { data } = await supabase
       .from("tracks" as any)
       .select("*")
-      .order("play_order", { ascending: sortAsc });
+      .order("published_date", { ascending: sortAsc });
     setTracks((data as unknown as Track[]) || []);
     setLoading(false);
   };
@@ -142,11 +143,11 @@ function TrackManager() {
       const durationSeconds = Math.round(file.size / 24000);
 
       const { data, error } = await supabase.functions.invoke("admin-upload", {
-        body: { token, title, artist: artist || "Unknown", fileUrl: urlData.publicUrl, durationSeconds, artworkUrl },
+        body: { token, title, artist: artist || "Unknown", fileUrl: urlData.publicUrl, durationSeconds, artworkUrl, publishedDate },
       });
       if (error || !data?.success) throw new Error(data?.error || "Upload failed");
       toast({ title: "TRACK UPLOADED" });
-      setTitle(""); setArtist("");
+      setTitle(""); setArtist(""); setPublishedDate(new Date().toISOString().slice(0, 10));
       if (fileRef.current) fileRef.current.value = "";
       if (artworkRef.current) artworkRef.current.value = "";
       fetchTracks();
@@ -171,6 +172,13 @@ function TrackManager() {
       body: { token, trackId1: tracks[idx].id, order1: tracks[swapIdx].play_order, trackId2: tracks[swapIdx].id, order2: tracks[idx].play_order },
     });
     fetchTracks();
+  };
+
+  const updatePublishedDate = async (trackId: string, date: string) => {
+    const { data, error } = await supabase.functions.invoke("admin-update-track", {
+      body: { token, trackId, publishedDate: date },
+    });
+    if (!error && data?.success) { toast({ title: "DATE UPDATED" }); fetchTracks(); }
   };
 
   const logout = () => { sessionStorage.removeItem("admin_token"); window.location.reload(); };
@@ -208,6 +216,10 @@ function TrackManager() {
             <div>
               <Label className="meter-label">MP3 FILE *</Label>
               <Input ref={fileRef} type="file" accept="audio/mpeg,audio/mp3" className="mt-1 font-mono text-xs" required />
+            </div>
+            <div>
+              <Label className="meter-label">PUBLISHED DATE</Label>
+              <Input type="date" value={publishedDate} onChange={(e) => setPublishedDate(e.target.value)} className="mt-1 font-mono text-xs" />
             </div>
             <div>
               <Label className="meter-label">ARTWORK IMAGE (OPTIONAL)</Label>
@@ -260,6 +272,12 @@ function TrackManager() {
                     <span className="text-xs font-mono uppercase truncate block">{track.title}</span>
                     <span className="meter-label">{track.artist.toUpperCase()}</span>
                   </div>
+                  <input
+                    type="date"
+                    value={track.published_date || ""}
+                    onChange={(e) => updatePublishedDate(track.id, e.target.value)}
+                    className="meter-label text-foreground bg-transparent border-none font-mono text-[10px] w-24 cursor-pointer"
+                  />
                   <span className="meter-label text-foreground">
                     {Math.floor(track.duration_seconds / 60)}:{(track.duration_seconds % 60).toString().padStart(2, "0")}
                   </span>

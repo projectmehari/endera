@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { token, title, artist, fileUrl, durationSeconds, artworkUrl } = await req.json();
+    const { token, title, artist, fileUrl, durationSeconds, artworkUrl, publishedDate } = await req.json();
 
     if (!(await verifyToken(token))) {
       return new Response(
@@ -82,6 +82,9 @@ Deno.serve(async (req) => {
     };
     if (artworkUrl && typeof artworkUrl === "string" && artworkUrl.startsWith("https://")) {
       insertData.artwork_url = artworkUrl;
+    }
+    if (publishedDate && typeof publishedDate === "string") {
+      insertData.published_date = publishedDate;
     }
 
     const { error: insertError } = await supabase.from("tracks").insert(insertData);

@@ -7,6 +7,7 @@ export interface Track {
   play_order: number;
   artwork_url: string | null;
   created_at: string;
+  published_date: string | null;
 }
 
 export interface StationConfig {
