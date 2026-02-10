@@ -164,7 +164,7 @@ export default function LiveBar() {
                 onValueChange={([v]) => setVolume(v / 100)}
                 max={100}
                 step={1}
-                className="w-16"
+                className="w-20 [&_[role=slider]]:h-3 [&_[role=slider]]:w-3 [&_[role=slider]]:border-foreground [&_.relative]:h-1"
               />
             </div>
           </div>
