@@ -160,7 +160,9 @@ export default function MixRow({ mix, index }: { mix: Track; index: number }) {
                   {tracks.map((t) => (
                     <div key={t.id} className="flex items-baseline gap-3 font-mono text-xs text-muted-foreground">
                       <span className="w-10 shrink-0 text-muted-foreground/60">
-                        {t.timestamp_label || String(t.position).padStart(2, "0")}
+                        {t.timestamp_label
+                          ? t.timestamp_label.replace(/\b(\d)\b/g, "0$1")
+                          : String(t.position).padStart(2, "0")}
                       </span>
                       <span className="truncate">
                         {t.track_artist.toLowerCase()} — {t.track_title.toLowerCase()}
