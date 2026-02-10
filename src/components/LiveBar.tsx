@@ -1,4 +1,6 @@
 import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
+import { Slider } from "@/components/ui/slider";
+import { SkipBack, SkipForward, Volume2 } from "lucide-react";
 
 function formatTime(seconds: number) {
   const m = Math.floor(seconds / 60);
@@ -14,9 +16,12 @@ export default function LiveBar() {
     liveData,
     liveLoading,
     mixElapsed,
+    volume,
     togglePlay,
     playLive,
     skipTrack,
+    setVolume,
+    seek,
   } = useAudioPlayer();
 
   const hasAdminToken =
@@ -24,11 +29,11 @@ export default function LiveBar() {
 
   const isLive = mode === "live";
 
-  // Determine display info
   let title = "";
   let artist = "";
   let elapsed = 0;
   let duration = 0;
+  let artworkUrl: string | null = null;
 
   if (isLive) {
     if (liveData?.now_playing) {
@@ -36,12 +41,14 @@ export default function LiveBar() {
       artist = liveData.now_playing.artist;
       elapsed = liveData.elapsed_seconds;
       duration = liveData.now_playing.duration_seconds;
+      artworkUrl = (liveData.now_playing as any).artwork_url ?? null;
     }
   } else if (currentMix) {
     title = currentMix.title;
     artist = currentMix.artist;
     elapsed = mixElapsed;
     duration = currentMix.duration_seconds;
+    artworkUrl = currentMix.artwork_url;
   }
 
   const progress = duration > 0 ? (elapsed / duration) * 100 : 0;
@@ -74,9 +81,9 @@ export default function LiveBar() {
               </span>
             ) : hasTrack ? (
               <div className="flex items-center gap-2 min-w-0">
-                {!isLive && currentMix && (
+                {artworkUrl && (
                   <img
-                    src={currentMix.artwork_url}
+                    src={artworkUrl}
                     alt=""
                     className="w-6 h-6 border border-foreground object-cover shrink-0"
                   />
@@ -113,6 +120,15 @@ export default function LiveBar() {
 
           {/* Controls */}
           <div className="flex items-center gap-1 shrink-0">
+            {/* Seek back */}
+            <button
+              onClick={() => seek(-10)}
+              disabled={!hasTrack}
+              className="p-1 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30"
+            >
+              <SkipBack size={12} />
+            </button>
+
             <button
               onClick={togglePlay}
               disabled={!hasTrack}
@@ -120,6 +136,16 @@ export default function LiveBar() {
             >
               {isPlaying ? "■" : "▶"}
             </button>
+
+            {/* Seek forward */}
+            <button
+              onClick={() => seek(10)}
+              disabled={!hasTrack}
+              className="p-1 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30"
+            >
+              <SkipForward size={12} />
+            </button>
+
             {hasAdminToken && isLive && (
               <button
                 onClick={skipTrack}
@@ -129,6 +155,18 @@ export default function LiveBar() {
                 ▶▶
               </button>
             )}
+
+            {/* Volume */}
+            <div className="hidden sm:flex items-center gap-1.5 ml-2">
+              <Volume2 size={12} className="text-muted-foreground shrink-0" />
+              <Slider
+                value={[volume * 100]}
+                onValueChange={([v]) => setVolume(v / 100)}
+                max={100}
+                step={1}
+                className="w-16"
+              />
+            </div>
           </div>
         </div>
       </div>
