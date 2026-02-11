@@ -49,8 +49,10 @@ export default function Explore() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <SiteHeader />
-      <LiveBar />
+      <div className="sticky top-0 z-50 bg-background">
+        <SiteHeader />
+        <LiveBar />
+      </div>
       <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-6 md:px-8">
         {/* Genre filter section */}
         <div className="meter-panel mb-6">

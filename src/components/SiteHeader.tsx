@@ -3,7 +3,7 @@ import LiveClock from "./LiveClock";
 
 export default function SiteHeader() {
   return (
-    <header className="sticky top-0 z-50 bg-background border-b border-foreground px-4 py-3 md:px-8">
+    <header className="bg-background border-b border-foreground px-4 py-3 md:px-8">
       <div className="max-w-5xl mx-auto flex items-center justify-between">
         <Link to="/" className="meter-value text-base tracking-tight">
           ENDERA.FM
