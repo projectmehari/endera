@@ -45,3 +45,10 @@ export interface MixTracklistEntry {
   timestamp_label: string | null;
   created_at: string;
 }
+
+export interface TrackGenre {
+  id: string;
+  track_id: string;
+  genre: string;
+  created_at: string;
+}

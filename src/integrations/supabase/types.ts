@@ -112,6 +112,35 @@ export type Database = {
         }
         Relationships: []
       }
+      track_genres: {
+        Row: {
+          created_at: string
+          genre: string
+          id: string
+          track_id: string
+        }
+        Insert: {
+          created_at?: string
+          genre: string
+          id?: string
+          track_id: string
+        }
+        Update: {
+          created_at?: string
+          genre?: string
+          id?: string
+          track_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "track_genres_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "tracks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tracks: {
         Row: {
           artist: string

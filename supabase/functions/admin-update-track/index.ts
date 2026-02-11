@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { token, trackId, publishedDate, title, artist, artworkUrl } = await req.json();
+    const { token, trackId, publishedDate, title, artist, artworkUrl, genres } = await req.json();
 
     if (!(await verifyToken(token))) {
       return new Response(
@@ -65,8 +65,25 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    const { error } = await supabase.from("tracks").update(updates).eq("id", trackId);
-    if (error) throw error;
+    if (Object.keys(updates).length > 0) {
+      const { error } = await supabase.from("tracks").update(updates).eq("id", trackId);
+      if (error) throw error;
+    }
+
+    // Handle genres update
+    if (Array.isArray(genres)) {
+      // Delete existing genres
+      await supabase.from("track_genres").delete().eq("track_id", trackId);
+      // Insert new genres
+      const genreRows = genres
+        .map((g: string) => (typeof g === "string" ? g.trim().toLowerCase() : ""))
+        .filter((g: string) => g.length > 0)
+        .map((genre: string) => ({ track_id: trackId, genre }));
+      if (genreRows.length > 0) {
+        const { error: genreError } = await supabase.from("track_genres").insert(genreRows);
+        if (genreError) console.error("Genre update error:", genreError);
+      }
+    }
 
     return new Response(
       JSON.stringify({ success: true }),
