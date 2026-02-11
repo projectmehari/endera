@@ -9,5 +9,17 @@ verify_jwt = false
 [functions.admin-update-track]
 verify_jwt = false
 
+[functions.admin-upload]
+verify_jwt = false
+
+[functions.admin-auth]
+verify_jwt = false
+
+[functions.admin-delete-track]
+verify_jwt = false
+
+[functions.admin-reorder]
+verify_jwt = false
+
 [functions.admin-update-config]
 verify_jwt = false
