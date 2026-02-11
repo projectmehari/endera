@@ -120,23 +120,32 @@ export default function TracklistDialog({ track, open, onOpenChange }: Props) {
                 <div key={entry.id}>
                   {editingId === entry.id ? (
                     <div className="space-y-1.5 py-1 border border-foreground/30 p-2">
-                      <div className="grid grid-cols-3 gap-1.5">
-                        <Input
-                          value={editFields.timestamp}
-                          onChange={(e) => setEditFields({ ...editFields, timestamp: e.target.value })}
-                          placeholder="00:15:30"
-                          className="font-mono text-xs h-7"
-                        />
-                        <Input
-                          value={editFields.artist}
-                          onChange={(e) => setEditFields({ ...editFields, artist: e.target.value })}
-                          className="font-mono text-xs h-7"
-                        />
-                        <Input
-                          value={editFields.title}
-                          onChange={(e) => setEditFields({ ...editFields, title: e.target.value })}
-                          className="font-mono text-xs h-7"
-                        />
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <span className="meter-label w-16 shrink-0">TIME</span>
+                          <Input
+                            value={editFields.timestamp}
+                            onChange={(e) => setEditFields({ ...editFields, timestamp: e.target.value })}
+                            placeholder="00:15:30"
+                            className="font-mono text-xs h-7"
+                          />
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="meter-label w-16 shrink-0">ARTIST</span>
+                          <Input
+                            value={editFields.artist}
+                            onChange={(e) => setEditFields({ ...editFields, artist: e.target.value })}
+                            className="font-mono text-xs h-7"
+                          />
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="meter-label w-16 shrink-0">TITLE</span>
+                          <Input
+                            value={editFields.title}
+                            onChange={(e) => setEditFields({ ...editFields, title: e.target.value })}
+                            className="font-mono text-xs h-7"
+                          />
+                        </div>
                       </div>
                       <div className="flex gap-1.5">
                         <button
