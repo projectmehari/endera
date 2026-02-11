@@ -73,6 +73,20 @@ Deno.serve(async (req) => {
       return json({ success: true });
     }
 
+    if (action === "update") {
+      const updates: Record<string, unknown> = {};
+      if (track_title !== undefined) updates.track_title = track_title;
+      if (track_artist !== undefined) updates.track_artist = track_artist || "Unknown";
+      if (timestamp_label !== undefined) updates.timestamp_label = timestamp_label || null;
+      
+      const { error } = await supabase
+        .from("mix_tracklists")
+        .update(updates)
+        .eq("id", entry_id);
+      if (error) return json({ success: false, error: error.message }, 400);
+      return json({ success: true });
+    }
+
     if (action === "delete") {
       const { error } = await supabase.from("mix_tracklists").delete().eq("id", entry_id);
       if (error) return json({ success: false, error: error.message }, 400);

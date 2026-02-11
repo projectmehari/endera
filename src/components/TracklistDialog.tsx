@@ -20,6 +20,8 @@ export default function TracklistDialog({ track, open, onOpenChange }: Props) {
   const [artist, setArtist] = useState("");
   const [timestamp, setTimestamp] = useState("");
   const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editFields, setEditFields] = useState({ title: "", artist: "", timestamp: "" });
   const { toast } = useToast();
   const token = sessionStorage.getItem("admin_token") || "";
 
@@ -70,6 +72,34 @@ export default function TracklistDialog({ track, open, onOpenChange }: Props) {
     if (!error && data?.success) fetchEntries();
   };
 
+  const startEdit = (entry: MixTracklistEntry) => {
+    setEditingId(entry.id);
+    setEditFields({
+      title: entry.track_title,
+      artist: entry.track_artist,
+      timestamp: entry.timestamp_label || "",
+    });
+  };
+
+  const handleUpdate = async (entryId: string) => {
+    const { data, error } = await supabase.functions.invoke("admin-tracklist", {
+      body: {
+        token,
+        action: "update",
+        entry_id: entryId,
+        track_title: editFields.title,
+        track_artist: editFields.artist || "Unknown",
+        timestamp_label: editFields.timestamp || null,
+      },
+    });
+    if (error || !data?.success) {
+      toast({ title: "FAILED TO UPDATE", variant: "destructive" });
+    } else {
+      setEditingId(null);
+      fetchEntries();
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md border-foreground bg-background p-0 gap-0">
@@ -87,18 +117,63 @@ export default function TracklistDialog({ track, open, onOpenChange }: Props) {
           ) : (
             <div className="space-y-1">
               {entries.map((entry) => (
-                <div key={entry.id} className="flex items-center gap-2 py-1 group">
-                  <span className="meter-label text-foreground w-6 text-right">{String(entry.position).padStart(2, "0")}</span>
-                  <span className="meter-label text-foreground w-16 shrink-0">{entry.timestamp_label || "—"}</span>
-                  <span className="text-xs font-mono truncate flex-1">
-                    {entry.track_artist.toUpperCase()} — {entry.track_title.toUpperCase()}
-                  </span>
-                  <button
-                    onClick={() => handleDelete(entry.id)}
-                    className="opacity-0 group-hover:opacity-100 meter-label text-muted-foreground hover:text-destructive transition-opacity"
-                  >
-                    [DEL]
-                  </button>
+                <div key={entry.id}>
+                  {editingId === entry.id ? (
+                    <div className="space-y-1.5 py-1 border border-foreground/30 p-2">
+                      <div className="grid grid-cols-3 gap-1.5">
+                        <Input
+                          value={editFields.timestamp}
+                          onChange={(e) => setEditFields({ ...editFields, timestamp: e.target.value })}
+                          placeholder="00:15:30"
+                          className="font-mono text-xs h-7"
+                        />
+                        <Input
+                          value={editFields.artist}
+                          onChange={(e) => setEditFields({ ...editFields, artist: e.target.value })}
+                          className="font-mono text-xs h-7"
+                        />
+                        <Input
+                          value={editFields.title}
+                          onChange={(e) => setEditFields({ ...editFields, title: e.target.value })}
+                          className="font-mono text-xs h-7"
+                        />
+                      </div>
+                      <div className="flex gap-1.5">
+                        <button
+                          onClick={() => handleUpdate(entry.id)}
+                          className="meter-label hover:text-foreground transition-colors"
+                        >
+                          [SAVE]
+                        </button>
+                        <button
+                          onClick={() => setEditingId(null)}
+                          className="meter-label hover:text-foreground transition-colors"
+                        >
+                          [CANCEL]
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 py-1 group">
+                      <span className="meter-label text-foreground w-6 text-right">{String(entry.position).padStart(2, "0")}</span>
+                      <span className="meter-label text-foreground w-16 shrink-0">{entry.timestamp_label || "—"}</span>
+                      <span className="text-xs font-mono truncate flex-1">
+                        {entry.track_artist.toUpperCase()} — {entry.track_title.toUpperCase()}
+                      </span>
+                      <button
+                        onClick={() => startEdit(entry)}
+                        className="opacity-0 group-hover:opacity-100 meter-label text-muted-foreground hover:text-foreground transition-opacity"
+                      >
+                        [EDIT]
+                      </button>
+                      <button
+                        onClick={() => handleDelete(entry.id)}
+                        className="opacity-0 group-hover:opacity-100 meter-label text-muted-foreground hover:text-destructive transition-opacity"
+                      >
+                        [DEL]
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
