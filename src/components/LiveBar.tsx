@@ -75,7 +75,7 @@ export default function LiveBar() {
           )}
 
           {/* Track info */}
-          <div className="flex-1 min-w-0">
+          <div className="min-w-0 shrink-0 max-w-[40%]">
             {liveLoading && isLive ? (
               <span className="meter-label">
                 CALIBRATING<span className="animate-blink">_</span>
@@ -103,7 +103,7 @@ export default function LiveBar() {
 
           {/* Progress */}
           {hasTrack && (
-            <div className="hidden md:flex items-center gap-2 shrink-0 w-56">
+            <div className="hidden md:flex flex-1 items-center gap-2">
               <span className="meter-label text-foreground text-[8px]">
                 {formatTime(elapsed)}
               </span>
