@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useMixTracklist } from "@/hooks/useMixes";
 import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
 import { Play, Pause } from "lucide-react";
@@ -6,6 +6,36 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import type { Track } from "@/lib/radio-types";
+
+function useArtworkColor(url: string | null) {
+  const [color, setColor] = useState<string | null>(null);
+  useEffect(() => {
+    if (!url) return;
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = 8;
+        canvas.height = 8;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        ctx.drawImage(img, 0, 0, 8, 8);
+        const data = ctx.getImageData(0, 0, 8, 8).data;
+        let r = 0, g = 0, b = 0, count = 0;
+        for (let i = 0; i < data.length; i += 4) {
+          r += data[i]; g += data[i + 1]; b += data[i + 2]; count++;
+        }
+        r = Math.round(r / count);
+        g = Math.round(g / count);
+        b = Math.round(b / count);
+        setColor(`${r}, ${g}, ${b}`);
+      } catch {}
+    };
+    img.src = url;
+  }, [url]);
+  return color;
+}
 
 function formatDuration(seconds: number) {
   const h = Math.floor(seconds / 3600);
@@ -17,6 +47,8 @@ function formatDuration(seconds: number) {
 
 export default function MixRow({ mix, index, total }: { mix: Track; index: number; total: number }) {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const artworkColor = useArtworkColor(mix.artwork_url);
   const [probedDuration, setProbedDuration] = useState<number | null>(null);
   const { tracks, loading } = useMixTracklist(dialogOpen ? mix.id : null);
 
@@ -65,8 +97,11 @@ export default function MixRow({ mix, index, total }: { mix: Track; index: numbe
     <>
       <div className="border-b border-muted-foreground/20">
         <div
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
           onClick={() => setDialogOpen(true)}
-          className={`flex items-center px-2 py-4 md:px-4 transition-colors hover:bg-muted/50 cursor-pointer ${
+          style={hovered && artworkColor ? { backgroundColor: `rgba(${artworkColor}, 0.12)` } : undefined}
+          className={`flex items-center px-2 py-4 md:px-4 transition-colors cursor-pointer ${
             isActive ? "bg-muted/60" : ""
           }`}
         >
