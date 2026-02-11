@@ -4,16 +4,146 @@ import SiteFooter from "@/components/SiteFooter";
 import LiveBar from "@/components/LiveBar";
 import { useGenres, useTracksByGenre } from "@/hooks/useGenres";
 import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
+import { useMixTracklist } from "@/hooks/useMixes";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { Search, Play, Pause } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import type { Track } from "@/lib/radio-types";
+
+function ExploreTrackDialog({
+  track,
+  open,
+  onOpenChange,
+}: {
+  track: Track;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const { tracks: tracklist, loading } = useMixTracklist(open ? track.id : null);
+  const { playMix, currentMix, mode, isPlaying, pause, resume } = useAudioPlayer();
+
+  const isActive = mode === "mix" && currentMix?.id === track.id;
+
+  const handlePlay = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isActive && isPlaying) {
+      pause();
+    } else if (isActive) {
+      resume();
+    } else {
+      playMix({
+        id: track.id,
+        title: track.title,
+        artist: track.artist,
+        file_url: track.file_url,
+        duration_seconds: track.duration_seconds,
+        artwork_url: track.artwork_url || "",
+        description: null,
+        display_order: 0,
+        created_at: track.created_at,
+      });
+    }
+  };
+
+  const formatDuration = (s: number) => {
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    if (h > 0) return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${sec.toString().padStart(2, "0")}`;
+    return `${m}:${sec.toString().padStart(2, "0")}`;
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md border-foreground bg-background p-0 gap-0">
+        <DialogTitle className="sr-only">{track.title}</DialogTitle>
+
+        {track.artwork_url && (
+          <img
+            src={track.artwork_url}
+            alt={track.title}
+            className="w-full aspect-square object-cover"
+          />
+        )}
+
+        <div className="px-5 py-4 space-y-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="font-mono text-sm text-foreground truncate">
+                {track.title.toLowerCase()}
+              </h3>
+              <p className="font-mono text-[10px] tracking-widest text-muted-foreground/60 uppercase">
+                {track.artist}
+              </p>
+              <p className="font-mono text-xs text-muted-foreground mt-1">
+                {formatDuration(track.duration_seconds)}
+                {track.published_date && (
+                  <span className="ml-3 text-muted-foreground/60">
+                    {new Date(track.published_date + "T00:00:00").toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
+                  </span>
+                )}
+              </p>
+            </div>
+            <button
+              onClick={handlePlay}
+              className={`w-9 h-9 flex items-center justify-center shrink-0 rounded-full border transition-colors ${
+                isActive
+                  ? "border-foreground text-foreground"
+                  : "border-muted-foreground/40 text-muted-foreground hover:border-foreground hover:text-foreground"
+              }`}
+            >
+              {isActive && isPlaying ? (
+                <Pause size={16} fill="currentColor" />
+              ) : (
+                <Play size={16} fill="currentColor" className="ml-0.5" />
+              )}
+            </button>
+          </div>
+
+          <Separator className="bg-muted-foreground/20" />
+          <ScrollArea className="max-h-[50vh]">
+            {loading ? (
+              <span className="font-mono text-xs text-muted-foreground">loading…</span>
+            ) : tracklist.length === 0 ? (
+              <span className="font-mono text-xs text-muted-foreground">no tracklist available</span>
+            ) : (
+              <div className="space-y-2.5 pr-3">
+                {tracklist.map((t) => (
+                  <div key={t.id} className="flex gap-3 font-mono text-xs">
+                    <span className="w-[4.5rem] shrink-0 text-muted-foreground/50 pt-0.5">
+                      {t.timestamp_label
+                        ? t.timestamp_label.replace(/\b(\d)\b/g, "0$1")
+                        : ""}
+                    </span>
+                    <div className="min-w-0">
+                      <span className="block font-bold text-foreground uppercase truncate">
+                        {t.track_artist}
+                      </span>
+                      <span className="block text-muted-foreground truncate">
+                        {t.track_title}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export default function Explore() {
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [search, setSearch] = useState("");
+  const [selectedTrack, setSelectedTrack] = useState<Track | null>(null);
   const { data: genres = [], isLoading: genresLoading } = useGenres();
   const { data: tracks = [], isLoading: tracksLoading } = useTracksByGenre(selectedGenres);
-  const { playMix, currentMix } = useAudioPlayer();
+  const { currentMix } = useAudioPlayer();
   const [trackGenresMap, setTrackGenresMap] = useState<Record<string, string[]>>({});
 
   // Fetch all track genres for badge display
@@ -120,14 +250,7 @@ export default function Explore() {
               return (
                 <button
                   key={track.id}
-                  onClick={() =>
-                    playMix({
-                      ...track,
-                      artwork_url: track.artwork_url || "",
-                      display_order: 0,
-                      description: null,
-                    } as any)
-                  }
+                  onClick={() => setSelectedTrack(track)}
                   className="group text-left border border-foreground/20 hover:border-foreground transition-colors bg-background"
                 >
                   {/* Artwork */}
@@ -161,7 +284,6 @@ export default function Explore() {
 
                   {/* Info */}
                   <div className="p-2.5 space-y-1.5">
-                    {/* Date */}
                     {track.published_date && (
                       <span className="meter-label block">
                         {new Date(track.published_date).toLocaleDateString("en-GB", {
@@ -171,8 +293,6 @@ export default function Explore() {
                         }).toUpperCase()}
                       </span>
                     )}
-
-                    {/* Title & artist */}
                     <p
                       className={`text-xs font-mono font-bold uppercase leading-tight line-clamp-2 ${
                         isActive ? "text-destructive" : "text-foreground"
@@ -183,8 +303,6 @@ export default function Explore() {
                     <p className="meter-label text-foreground/70">
                       {track.artist.toUpperCase()}
                     </p>
-
-                    {/* Genre tags */}
                     {trackGenres.length > 0 && (
                       <div className="flex flex-wrap gap-1 pt-1">
                         {trackGenres.map((g) => (
@@ -205,6 +323,14 @@ export default function Explore() {
         )}
       </main>
       <SiteFooter />
+
+      {selectedTrack && (
+        <ExploreTrackDialog
+          track={selectedTrack}
+          open={!!selectedTrack}
+          onOpenChange={(open) => { if (!open) setSelectedTrack(null); }}
+        />
+      )}
     </div>
   );
 }

@@ -11,6 +11,16 @@ import TracklistDialog from "@/components/TracklistDialog";
 import { useTrackGenres } from "@/hooks/useGenres";
 import type { Track } from "@/lib/radio-types";
 
+const NTS_GENRES = [
+  "acid", "ambient", "art rock", "bass", "breakbeat", "club", "cumbia", "dark ambient",
+  "deep house", "disco", "drum & bass", "dub", "dubstep", "electro", "electronica",
+  "experimental", "folk", "footwork", "funk", "gamelan", "garage", "grime", "guaracha",
+  "house", "indie rock", "industrial", "interview", "jazz", "jungle", "leftfield pop",
+  "live performance", "lovers rock", "minimal", "minimal synth", "modern classical",
+  "noise", "noise rock", "post punk", "psychedelic rock", "rap", "reggae", "rnb",
+  "soul", "soundtrack", "techno", "trance", "trip hop", "uk garage",
+].sort();
+
 function AdminLogin({ onLogin }: { onLogin: () => void }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -150,6 +160,18 @@ function EditTrackDialog({
           <div>
             <Label className="meter-label">GENRES (COMMA-SEPARATED)</Label>
             <Input value={editGenres} onChange={(e) => setEditGenres(e.target.value)} placeholder="ambient, house, techno" className="mt-1 font-mono text-xs" />
+            <div className="flex flex-wrap gap-1 mt-2">
+              {NTS_GENRES.filter((g) => !editGenres.split(",").map(s => s.trim().toLowerCase()).includes(g)).slice(0, 20).map((g) => (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={() => setEditGenres((prev) => prev ? `${prev}, ${g}` : g)}
+                  className="text-[8px] font-mono uppercase tracking-wider border border-foreground/20 px-1.5 py-0.5 text-muted-foreground hover:border-foreground hover:text-foreground transition-colors"
+                >
+                  + {g}
+                </button>
+              ))}
+            </div>
           </div>
           <button
             onClick={handleSave}
@@ -374,6 +396,18 @@ function TrackManager() {
             <div>
               <Label className="meter-label">GENRES (COMMA-SEPARATED)</Label>
               <Input value={genres} onChange={(e) => setGenres(e.target.value)} placeholder="ambient, house, techno" className="mt-1 font-mono text-xs" />
+              <div className="flex flex-wrap gap-1 mt-2">
+                {NTS_GENRES.filter((g) => !genres.split(",").map(s => s.trim().toLowerCase()).includes(g)).slice(0, 20).map((g) => (
+                  <button
+                    key={g}
+                    type="button"
+                    onClick={() => setGenres((prev) => prev ? `${prev}, ${g}` : g)}
+                    className="text-[8px] font-mono uppercase tracking-wider border border-foreground/20 px-1.5 py-0.5 text-muted-foreground hover:border-foreground hover:text-foreground transition-colors"
+                  >
+                    + {g}
+                  </button>
+                ))}
+              </div>
             </div>
             {uploading && (
               <div className="space-y-1">
