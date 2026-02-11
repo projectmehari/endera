@@ -7,8 +7,10 @@ import { Link } from "react-router-dom";
 
 const Index = () => (
   <div className="min-h-screen flex flex-col bg-background">
-    <SiteHeader />
-    <LiveBar />
+    <div className="sticky top-0 z-50 bg-background">
+      <SiteHeader />
+      <LiveBar />
+    </div>
     <main className="flex-1 px-4 py-8 md:px-8">
       <div className="max-w-5xl mx-auto space-y-10">
         <AboutSection />
