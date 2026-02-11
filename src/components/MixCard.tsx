@@ -171,7 +171,7 @@ export default function MixRow({ mix, index, total }: { mix: Track; index: numbe
 
       {/* Detail Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md border-foreground bg-background p-0 gap-0">
+        <DialogContent className="max-w-md border-foreground bg-background p-0 gap-0 max-h-[90vh] overflow-y-auto">
           <DialogTitle className="sr-only">{mix.title}</DialogTitle>
 
           {mix.artwork_url && (
@@ -219,7 +219,7 @@ export default function MixRow({ mix, index, total }: { mix: Track; index: numbe
 
             {/* Tracklist */}
             <Separator className="bg-muted-foreground/20" />
-            <ScrollArea className="max-h-[50vh]">
+            <div>
               {loading ? (
                 <span className="font-mono text-xs text-muted-foreground">loading…</span>
               ) : tracks.length === 0 ? (
@@ -245,7 +245,7 @@ export default function MixRow({ mix, index, total }: { mix: Track; index: numbe
                   ))}
                 </div>
               )}
-            </ScrollArea>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
