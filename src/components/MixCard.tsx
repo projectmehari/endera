@@ -49,6 +49,18 @@ export default function MixRow({ mix, index, total }: { mix: Track; index: numbe
   const [dialogOpen, setDialogOpen] = useState(false);
   const [hovered, setHovered] = useState(false);
   const artworkColor = useArtworkColor(mix.artwork_url);
+
+  // Apply a full-page color wash on hover via a fixed overlay
+  useEffect(() => {
+    const overlay = document.getElementById("artwork-color-overlay");
+    if (!overlay) return;
+    if (hovered && artworkColor) {
+      overlay.style.backgroundColor = `rgba(${artworkColor}, 0.06)`;
+      overlay.style.opacity = "1";
+    } else if (!hovered) {
+      overlay.style.opacity = "0";
+    }
+  }, [hovered, artworkColor]);
   const [probedDuration, setProbedDuration] = useState<number | null>(null);
   const { tracks, loading } = useMixTracklist(dialogOpen ? mix.id : null);
 
@@ -100,8 +112,7 @@ export default function MixRow({ mix, index, total }: { mix: Track; index: numbe
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
           onClick={() => setDialogOpen(true)}
-          style={hovered && artworkColor ? { backgroundColor: `rgba(${artworkColor}, 0.12)` } : undefined}
-          className={`flex items-center px-2 py-4 md:px-4 transition-colors cursor-pointer ${
+          className={`flex items-center px-2 py-4 md:px-4 transition-colors hover:bg-muted/30 cursor-pointer ${
             isActive ? "bg-muted/60" : ""
           }`}
         >
