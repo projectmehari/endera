@@ -1,53 +1,109 @@
 
 
-## Toggle PWA Service Worker On/Off from Admin
+## Add Genre Tags to Tracks + Explore Page
 
-### Problem
-The PWA service worker caching is causing performance issues. You want an admin toggle to enable/disable it, defaulted to **off**.
+### Overview
+Add genre tagging to radio tracks via the admin panel, and create a new "Explore" page where visitors can browse and filter tracks by genre.
 
-### Approach
+### 1. Database Changes
 
-1. **Add a `pwa_enabled` column to `station_config`**
-   - New boolean column, default `false` (off for now)
-   - Migration: `ALTER TABLE station_config ADD COLUMN pwa_enabled boolean NOT NULL DEFAULT false;`
+**New table: `track_genres`** (join table for many-to-many relationship)
+- `id` (uuid, PK, default `gen_random_uuid()`)
+- `track_id` (uuid, NOT NULL, references `tracks.id` ON DELETE CASCADE)
+- `genre` (text, NOT NULL) -- stored as lowercase, e.g. "ambient", "house", "techno"
+- `created_at` (timestamptz, default `now()`)
+- Unique constraint on `(track_id, genre)` to prevent duplicates
+- RLS: public SELECT, no public INSERT/UPDATE/DELETE
 
-2. **Add an admin edge function to update this setting**
-   - Extend the existing `admin-update-track` function or create a small `admin-update-config` edge function that accepts `{ token, pwaEnabled }` and updates the `station_config` row.
+Using a join table (rather than a text array column) keeps things normalized and makes querying tracks by genre efficient with standard SQL joins.
 
-3. **Add a toggle switch in the Admin panel**
-   - In the header area of `TrackManager`, add a labeled Switch component (already available via `@radix-ui/react-switch`)
-   - On mount, fetch `station_config.pwa_enabled` and set the switch state
-   - On toggle, call the edge function to persist the change
+### 2. Backend: Edge Function Update
 
-4. **Conditionally register/unregister the service worker on the frontend**
-   - In `src/main.tsx` (or `App.tsx`), fetch `station_config.pwa_enabled` on app load
-   - If **disabled**: unregister any existing service worker (`navigator.serviceWorker.getRegistrations()` then `.unregister()`)
-   - If **enabled**: let the VitePWA auto-registration proceed as normal
-   - The PWA plugin's `registerType: "autoUpdate"` auto-registers a SW; we'll override this by adding manual control: set `registerType: "prompt"` or handle registration ourselves based on the DB flag
+**Modify `admin-upload` edge function** to accept an optional `genres` string array and insert rows into `track_genres` after creating the track.
+
+**Modify `admin-update-track` edge function** to accept an optional `genres` string array. When provided, delete existing genres for that track and re-insert the new set.
+
+### 3. Admin Panel Changes (`src/pages/Admin.tsx`)
+
+**Upload form:**
+- Add a "GENRES" text input where the admin types comma-separated genre tags (e.g. "ambient, house, downtempo")
+- On submit, split by comma, trim, lowercase, and send as `genres` array in the upload payload
+
+**Edit track dialog (`EditTrackDialog`):**
+- Fetch existing genres for the track from `track_genres`
+- Show them in a comma-separated input, pre-filled
+- On save, send updated `genres` array to `admin-update-track`
+
+**Track list rows:**
+- Display small genre badges next to each track for quick reference
+
+### 4. New Explore Page (`src/pages/Explore.tsx`)
+
+- Standard page layout with `SiteHeader` and `SiteFooter`
+- Top section: horizontal row of clickable genre "chips" fetched from distinct genres in `track_genres`
+- Clicking a genre chip filters the track list; multiple genres can be selected (OR logic)
+- A search/filter input for free-text genre search
+- Below: filtered track list using the same `MixRow` component, showing matching tracks
+- Empty state when no tracks match
+
+### 5. Navigation Update
+
+**`SiteHeader.tsx`:** Add an "EXPLORE" link between HOME and TOOLS.
+
+**`App.tsx`:** Add route `/explore` pointing to the new Explore page.
+
+### 6. Types Update
+
+**`src/lib/radio-types.ts`:** Add a `TrackGenre` interface and optionally extend `Track` to include an optional `genres` string array for client-side use.
+
+### 7. New Hook (`src/hooks/useGenres.ts`)
+
+- `useGenres()` -- fetches all distinct genre values from `track_genres`
+- `useTracksByGenre(genres: string[])` -- fetches tracks filtered by selected genres using a join query
+
+---
 
 ### Technical Details
 
-**Database migration:**
+**Migration SQL:**
 ```sql
-ALTER TABLE station_config ADD COLUMN pwa_enabled boolean NOT NULL DEFAULT false;
+CREATE TABLE public.track_genres (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  track_id uuid NOT NULL REFERENCES public.tracks(id) ON DELETE CASCADE,
+  genre text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(track_id, genre)
+);
+
+ALTER TABLE public.track_genres ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Track genres are publicly readable"
+  ON public.track_genres FOR SELECT
+  USING (true);
 ```
 
-**Edge function `admin-update-config/index.ts`:**
-- Validates admin token
-- Accepts `{ token, pwaEnabled: boolean }`
-- Updates `station_config` table
+**Edge function changes:**
+- `admin-upload/index.ts`: After inserting track, if `genres` array provided, batch-insert into `track_genres`
+- `admin-update-track/index.ts`: If `genres` provided, delete from `track_genres` where `track_id` matches, then insert new rows
 
-**`src/main.tsx` changes:**
-- Import supabase client
-- Before rendering, query `station_config` for `pwa_enabled`
-- If false, unregister all service workers and delete caches
-- If true, import and call `registerSW` from `virtual:pwa-register`
+**Explore page query pattern:**
+```sql
+SELECT DISTINCT t.* FROM tracks t
+  JOIN track_genres tg ON tg.track_id = t.id
+  WHERE tg.genre = ANY($selectedGenres)
+  ORDER BY t.published_date DESC
+```
+This will be done via the Supabase JS client using `.in()` filter on a joined query, or via a small RPC function if needed.
 
-**`vite.config.ts` changes:**
-- Switch `registerType` from `"autoUpdate"` to `"manual"` so the app controls when/if the SW registers
+**Files to create:**
+- `src/pages/Explore.tsx`
+- `src/hooks/useGenres.ts`
 
-**`src/pages/Admin.tsx` changes:**
-- Add a "PWA / OFFLINE MODE" toggle in the header panel using the Switch component
-- Fetch current state from `station_config` on mount
-- Call `admin-update-config` on toggle
+**Files to modify:**
+- `src/App.tsx` (add route)
+- `src/components/SiteHeader.tsx` (add nav link)
+- `src/lib/radio-types.ts` (add TrackGenre type)
+- `src/pages/Admin.tsx` (genre input in upload + edit)
+- `supabase/functions/admin-upload/index.ts` (handle genres)
+- `supabase/functions/admin-update-track/index.ts` (handle genres)
 
