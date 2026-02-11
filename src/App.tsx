@@ -7,6 +7,7 @@ import { AudioPlayerProvider } from "@/contexts/AudioPlayerContext";
 import Index from "./pages/Index";
 import Admin from "./pages/Admin";
 import Tools from "./pages/Tools";
+import Install from "./pages/Install";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/tools" element={<Tools />} />
+            <Route path="/install" element={<Install />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AudioPlayerProvider>
