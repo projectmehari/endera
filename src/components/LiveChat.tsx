@@ -19,6 +19,13 @@ export default function LiveChat() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const prevCountRef = useRef(messages.length);
   const isNearBottom = useRef(true);
+  const [, setTick] = useState(0);
+
+  // Auto-refresh timestamps every 30s
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 30_000);
+    return () => clearInterval(id);
+  }, []);
 
   // Track scroll position
   const handleScroll = useCallback(() => {
