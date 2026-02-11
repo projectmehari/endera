@@ -14,6 +14,9 @@ const Index = () => (
     <main className="flex-1 px-4 py-8 md:px-8">
       <div className="max-w-5xl mx-auto space-y-10">
         <AboutSection />
+        <div className="border-t border-foreground pt-6">
+          <span className="meter-label">— LATEST TRACKS —</span>
+        </div>
         <MixFeed />
         <section className="meter-panel p-6 text-center">
           <div className="meter-label mb-2">— TOOLS —</div>
