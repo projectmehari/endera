@@ -1,89 +1,85 @@
 
 
-# Plan: Tracklist, Genre & Explore Page Improvements
+# Live Chat Component for ENDERA.FM
 
-This plan covers four changes: fixing the edit/delete buttons visibility, adding scrollable tracklist to both the mix detail dialog and explore page, populating genres from NTS, and switching genre filtering to AND logic.
+## Overview
 
----
-
-## 1. Fix Edit/Delete Buttons in Admin Tracklist
-
-The `[DEL]` button on line 171 of `TracklistDialog.tsx` still has `opacity-0 group-hover:opacity-100` classes -- the previous fix only removed them from `[EDIT]` but missed `[DEL]`. Both buttons will be made always visible with clear styling, and laid out on a separate row below each entry for easy tapping on mobile.
-
-**File:** `src/components/TracklistDialog.tsx`
-- Remove `opacity-0 group-hover:opacity-100` from the `[DEL]` button
-- Move `[EDIT]` and `[DEL]` to a dedicated row below each tracklist entry for better mobile touch targets
-- Increase button tap area with padding
+A floating live chat widget inspired by n10.as's community board, adapted to ENDERA.FM's industrial meter aesthetic. The chat appears as a collapsible panel in the bottom-right corner of every page, letting listeners talk to each other in real time.
 
 ---
 
-## 2. Scrollable Tracklist in Dialogs + Tracklist on Explore Page
+## Features
 
-### 2a. Fix scroll in MixCard dialog
-The `ScrollArea` on the tracklist in `MixCard.tsx` (line 222) uses `max-h-60` which may be too small. It will be increased and given a proper fixed height so the dialog content scrolls naturally while artwork and info stay pinned.
+### Core (requested)
+- **Name login**: A simple "enter your name" prompt stored in localStorage -- no account needed
+- **Minimize / maximize**: A small floating button toggles the chat panel open and closed
+- **Real-time messaging**: Messages appear instantly for all connected users via Lovable Cloud realtime subscriptions
 
-**File:** `src/components/MixCard.tsx`
-- Change `max-h-60` to `max-h-[50vh]` on the `ScrollArea` so longer tracklists are scrollable within the viewport
-
-### 2b. Add tracklist to Explore page cards
-Currently, clicking a card on the Explore page only starts playback. It will be updated to also open a detail dialog (reusing the same pattern from `MixCard.tsx`) that shows artwork, track info, and a scrollable tracklist.
-
-**File:** `src/pages/Explore.tsx`
-- Import `useMixTracklist` from `@/hooks/useMixes`
-- Import `Dialog`, `DialogContent`, `DialogTitle`, `ScrollArea`, `Separator`
-- Add state for `selectedTrack` and `dialogOpen`
-- Change the card click handler to open the dialog instead of just playing
-- Add a play button inside the dialog
-- Render the tracklist inside the dialog with the same NTS-inspired styling as `MixCard.tsx`
+### Suggested additions
+- **"Now listening" indicator**: Show a small listener count or dot next to the chat title so people know the room is active
+- **Timestamps**: Each message displays a relative time (e.g. "2m ago") in the `meter-label` style
+- **Auto-scroll with "new messages" nudge**: Chat auto-scrolls to the bottom; if the user has scrolled up, a small "NEW" badge appears instead of forcing them down
+- **Admin messages**: Messages from the admin (matched by name or a flag) get a subtle accent border so station announcements stand out
+- **Message length limit**: 280 characters max to keep it snappy, with a character counter
 
 ---
 
-## 3. Populate Genre Tags from NTS
+## Visual Design
 
-The NTS `/latest` page contains these genres (extracted from the crawl). New genres to insert into `track_genres` won't be tied to specific tracks -- instead, they'll be available as options in the admin genre picker. However, since `track_genres` requires a `track_id`, genres need to be assigned to tracks.
+The chat follows ENDERA's instrument-panel aesthetic:
 
-A better approach: insert the genre list as available options directly. Since the current system derives genres from the `track_genres` table, I'll add the new genres as a predefined list in the admin UI's genre selector, so admins can tag tracks with them. No schema change needed.
-
-**New genres from NTS** (not already in the database): soundtrack, live performance, interview, indie rock, leftfield pop, art rock, electronica, folk, gamelan, industrial, dark ambient, noise, modern classical, club, footwork, rap, noise rock, electro, acid, funk, soul, minimal synth, post punk, psychedelic rock, cumbia, guaracha, dub, lovers rock, reggae
-
-**File:** `src/pages/Admin.tsx` (or wherever genre assignment happens)
-- Add a hardcoded `NTS_GENRES` array containing all discovered genres
-- Merge these with existing genres from the database in the genre picker dropdown
-- When an admin assigns a genre to a track, it gets inserted into `track_genres`
-
----
-
-## 4. AND Logic for Genre Filtering on Explore
-
-Currently, selecting multiple genres uses OR logic (shows tracks matching ANY selected genre). The request is to use AND logic (only show tracks that have ALL selected genres).
-
-**File:** `src/hooks/useGenres.ts`
-- In `useTracksByGenre`, change the filtering logic:
-  - Query `track_genres` for rows matching any of the selected genres
-  - Group by `track_id` and count distinct genres
-  - Only include track IDs where the count equals `selectedGenres.length` (i.e., the track has ALL selected genres)
-
-```text
-Current flow:
-  SELECT track_id FROM track_genres WHERE genre IN (selected)
-  -> returns all tracks with ANY genre
-
-New flow:
-  SELECT track_id FROM track_genres WHERE genre IN (selected)
-  -> group by track_id in JS
-  -> filter where count of matched genres === selectedGenres.length
-  -> only return tracks that match ALL selected genres
-```
+- **Collapsed state**: A small `meter-panel` button in the bottom-right reading "CHAT" with a pulsing `meter-dot-active` when there are unread messages
+- **Expanded state**: A 320px-wide, 420px-tall `meter-panel` box with:
+  - Header bar: "ENDERA CHAT" in `meter-value` style + minimize button (a dash icon)
+  - Listener count in `meter-label` style
+  - Message area: scrollable, each message shows name in bold `meter-value` (10px), text in JetBrains Mono, and timestamp in `meter-label`
+  - Input bar at the bottom: a single-line input with a "SEND" button, bordered in the `meter-inset` style
+- **Name prompt**: On first open, a small `meter-panel` overlay inside the chat asks for a display name with a single input + "JOIN" button
 
 ---
 
-## Technical Summary
+## Technical Plan
 
-| File | Change |
+### 1. Database table: `chat_messages`
+
+New table with columns:
+- `id` (uuid, primary key, default `gen_random_uuid()`)
+- `username` (text, not null)
+- `message` (text, not null)
+- `created_at` (timestamptz, default `now()`)
+
+RLS policy: public SELECT (anyone can read), public INSERT (anyone can insert -- no auth required for a simple chat room). No UPDATE or DELETE for regular users.
+
+Enable realtime: `ALTER PUBLICATION supabase_realtime ADD TABLE public.chat_messages;`
+
+### 2. New component: `src/components/LiveChat.tsx`
+
+A self-contained floating widget:
+- State: `isOpen`, `username` (from localStorage), `messages`, `newMessage`
+- On mount: fetch last 50 messages, subscribe to realtime inserts
+- On send: insert into `chat_messages` via Supabase client
+- Username stored in `localStorage` under key `endera_chat_name`
+- Input validation: trim whitespace, 280 char max, prevent empty sends
+- Auto-scroll logic with "new messages" indicator
+
+### 3. Mount in `App.tsx`
+
+Add `<LiveChat />` inside `AudioPlayerProvider` so it appears on every page, floating above all content with `fixed bottom-4 right-4 z-40`.
+
+### 4. New hook: `src/hooks/useChatMessages.ts`
+
+- `useQuery` to fetch the latest 50 messages ordered by `created_at desc` (reversed for display)
+- Realtime subscription via `supabase.channel('chat')` listening for `INSERT` events on `chat_messages`
+- Appends new messages to the query cache for instant updates
+
+---
+
+## Files to Create / Modify
+
+| File | Action |
 |------|--------|
-| `src/components/TracklistDialog.tsx` | Fix [DEL] visibility, improve mobile layout |
-| `src/components/MixCard.tsx` | Increase scroll area height |
-| `src/pages/Explore.tsx` | Add detail dialog with tracklist |
-| `src/hooks/useGenres.ts` | Switch to AND filtering logic |
-| `src/pages/Admin.tsx` | Add NTS genre list to genre picker |
+| Migration SQL | Create `chat_messages` table + RLS + realtime |
+| `src/components/LiveChat.tsx` | New -- full chat widget component |
+| `src/hooks/useChatMessages.ts` | New -- data fetching + realtime hook |
+| `src/App.tsx` | Add `<LiveChat />` component |
 
