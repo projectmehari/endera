@@ -19,6 +19,7 @@ interface AudioPlayerContextValue {
   liveData: NowPlayingResponse | null;
   liveLoading: boolean;
   mixElapsed: number;
+  realDuration: number | null;
   volume: number;
   playLive: () => void;
   playMix: (mix: Mix) => void;
@@ -44,6 +45,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentMix, setCurrentMix] = useState<Mix | null>(null);
   const [mixElapsed, setMixElapsed] = useState(0);
+  const [realDuration, setRealDuration] = useState<number | null>(null);
   const [currentLiveUrl, setCurrentLiveUrl] = useState<string | null>(null);
   const [volume, setVolumeState] = useState(1);
 
@@ -91,16 +93,20 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
     }
   }, [liveData?.now_playing?.file_url, liveData?.elapsed_seconds, mode]);
 
-  // Mix timeupdate
+  // Track timeupdate + duration + ended
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
     const onTime = () => {
       if (mode === "mix") setMixElapsed(audio.currentTime);
     };
+    const onMeta = () => {
+      if (audio.duration && isFinite(audio.duration)) {
+        setRealDuration(audio.duration);
+      }
+    };
     const onEnded = () => {
       if (mode === "mix") {
-        // Auto-return to live
         setCurrentMix(null);
         setMode("live");
         setMixElapsed(0);
@@ -115,9 +121,13 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
       }
     };
     audio.addEventListener("timeupdate", onTime);
+    audio.addEventListener("loadedmetadata", onMeta);
+    audio.addEventListener("durationchange", onMeta);
     audio.addEventListener("ended", onEnded);
     return () => {
       audio.removeEventListener("timeupdate", onTime);
+      audio.removeEventListener("loadedmetadata", onMeta);
+      audio.removeEventListener("durationchange", onMeta);
       audio.removeEventListener("ended", onEnded);
     };
   }, [mode, liveData]);
@@ -203,6 +213,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
         liveData,
         liveLoading,
         mixElapsed,
+        realDuration,
         volume,
         playLive,
         playMix,
