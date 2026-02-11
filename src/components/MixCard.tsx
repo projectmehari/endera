@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMixTracklist } from "@/hooks/useMixes";
 import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
 import { Play, Pause } from "lucide-react";
@@ -17,7 +17,25 @@ function formatDuration(seconds: number) {
 
 export default function MixRow({ mix, index, total }: { mix: Track; index: number; total: number }) {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [probedDuration, setProbedDuration] = useState<number | null>(null);
   const { tracks, loading } = useMixTracklist(dialogOpen ? mix.id : null);
+
+  // Probe real audio duration
+  useEffect(() => {
+    const audio = new Audio();
+    audio.preload = "metadata";
+    const onMeta = () => {
+      if (audio.duration && isFinite(audio.duration)) {
+        setProbedDuration(Math.round(audio.duration));
+      }
+    };
+    audio.addEventListener("loadedmetadata", onMeta);
+    audio.src = mix.file_url;
+    return () => {
+      audio.removeEventListener("loadedmetadata", onMeta);
+      audio.src = "";
+    };
+  }, [mix.file_url]);
   const { playMix, currentMix, mode, isPlaying, pause, resume } = useAudioPlayer();
 
   const isActive = mode === "mix" && currentMix?.id === mix.id;
@@ -96,7 +114,7 @@ export default function MixRow({ mix, index, total }: { mix: Track; index: numbe
 
           {/* Duration */}
           <span className="font-mono text-sm text-muted-foreground shrink-0 ml-4">
-            {formatDuration(mix.duration_seconds)}
+            {formatDuration(probedDuration ?? mix.duration_seconds)}
           </span>
         </div>
 
@@ -129,7 +147,7 @@ export default function MixRow({ mix, index, total }: { mix: Track; index: numbe
                   {mix.artist}
                 </p>
                 <p className="font-mono text-xs text-muted-foreground mt-1">
-                  {formatDuration(mix.duration_seconds)}
+                  {formatDuration(probedDuration ?? mix.duration_seconds)}
                   {mix.published_date && (
                     <span className="ml-3 text-muted-foreground/60">
                       {new Date(mix.published_date + "T00:00:00").toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
