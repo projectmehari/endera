@@ -22,6 +22,7 @@ export default function TracklistDialog({ track, open, onOpenChange }: Props) {
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editFields, setEditFields] = useState({ title: "", artist: "", timestamp: "" });
+  const [analyzing, setAnalyzing] = useState(false);
   const { toast } = useToast();
   const token = sessionStorage.getItem("admin_token") || "";
 
@@ -100,13 +101,62 @@ export default function TracklistDialog({ track, open, onOpenChange }: Props) {
     }
   };
 
+  const handleAiDetect = async () => {
+    setAnalyzing(true);
+    toast({ title: "ANALYZING AUDIO...", description: "This may take a minute." });
+    try {
+      const { data, error } = await supabase.functions.invoke("analyze-tracklist", {
+        body: {
+          token,
+          trackId: track.id,
+          audioUrl: track.file_url,
+          trackTitle: track.title,
+          trackArtist: track.artist,
+        },
+      });
+      if (error || !data?.success) {
+        toast({ title: "AI ANALYSIS FAILED", description: data?.error || "Unknown error", variant: "destructive" });
+        return;
+      }
+
+      // Insert detected tracks
+      const detected = data.tracks as { timestamp: string; artist: string; title: string }[];
+      for (let i = 0; i < detected.length; i++) {
+        await supabase.functions.invoke("admin-tracklist", {
+          body: {
+            token,
+            action: "add",
+            mix_id: track.id,
+            position: entries.length + i + 1,
+            timestamp_label: detected[i].timestamp || null,
+            track_artist: detected[i].artist || "Unknown",
+            track_title: detected[i].title,
+          },
+        });
+      }
+      toast({ title: `DETECTED ${detected.length} TRACKS` });
+      fetchEntries();
+    } catch (err: any) {
+      toast({ title: "AI ANALYSIS ERROR", description: err.message, variant: "destructive" });
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md border-foreground bg-background p-0 gap-0">
         <DialogTitle className="sr-only">Tracklist for {track.title}</DialogTitle>
 
-        <div className="border-b border-foreground px-4 py-2">
+        <div className="border-b border-foreground px-4 py-2 flex items-center justify-between">
           <span className="meter-label">TRACKLIST — {track.title.toUpperCase()}</span>
+          <button
+            onClick={handleAiDetect}
+            disabled={analyzing}
+            className="meter-label text-muted-foreground hover:text-foreground transition-colors px-2 py-0.5 border border-foreground/20 hover:border-foreground disabled:opacity-50"
+          >
+            {analyzing ? "ANALYZING..." : "[AI DETECT]"}
+          </button>
         </div>
 
         <ScrollArea className="max-h-[50vh] p-4">
