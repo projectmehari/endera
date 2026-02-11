@@ -92,18 +92,21 @@ export type Database = {
         Row: {
           id: string
           playlist_started_at: string
+          pwa_enabled: boolean
           station_name: string
           updated_at: string
         }
         Insert: {
           id?: string
           playlist_started_at?: string
+          pwa_enabled?: boolean
           station_name?: string
           updated_at?: string
         }
         Update: {
           id?: string
           playlist_started_at?: string
+          pwa_enabled?: boolean
           station_name?: string
           updated_at?: string
         }

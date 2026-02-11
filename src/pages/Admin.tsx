@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowUp, ArrowDown, Pencil } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -159,6 +160,8 @@ function TrackManager() {
   const [artist, setArtist] = useState("");
   const [publishedDate, setPublishedDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [sortAsc, setSortAsc] = useState(true);
+  const [pwaEnabled, setPwaEnabled] = useState(false);
+  const [pwaLoading, setPwaLoading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const artworkRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -174,6 +177,26 @@ function TrackManager() {
   };
 
   useEffect(() => { fetchTracks(); }, [sortAsc]);
+
+  useEffect(() => {
+    supabase.from("station_config").select("pwa_enabled").limit(1).single().then(({ data }) => {
+      if (data) setPwaEnabled(data.pwa_enabled ?? false);
+    });
+  }, []);
+
+  const togglePwa = async (enabled: boolean) => {
+    setPwaLoading(true);
+    const { data, error } = await supabase.functions.invoke("admin-update-config", {
+      body: { token, pwaEnabled: enabled },
+    });
+    if (!error && data?.success) {
+      setPwaEnabled(enabled);
+      toast({ title: enabled ? "PWA ENABLED" : "PWA DISABLED" });
+    } else {
+      toast({ title: "UPDATE FAILED", variant: "destructive" });
+    }
+    setPwaLoading(false);
+  };
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -280,7 +303,11 @@ function TrackManager() {
         <div className="meter-panel mb-4">
           <div className="border-b border-foreground px-4 py-2 flex items-center justify-between">
             <span className="meter-label">TRACK MANAGEMENT CONSOLE</span>
-            <div className="flex gap-3">
+            <div className="flex gap-3 items-center">
+              <div className="flex items-center gap-1.5">
+                <Label className="meter-label cursor-pointer" htmlFor="pwa-toggle">PWA</Label>
+                <Switch id="pwa-toggle" checked={pwaEnabled} onCheckedChange={togglePwa} disabled={pwaLoading} className="scale-75" />
+              </div>
               <a href="/" className="meter-label hover:text-foreground transition-colors">[RADIO]</a>
               <button onClick={logout} className="meter-label hover:text-foreground transition-colors">[LOGOUT]</button>
             </div>
