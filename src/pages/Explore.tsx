@@ -58,7 +58,7 @@ function ExploreTrackDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md border-foreground bg-background p-0 gap-0">
+      <DialogContent className="max-w-md border-foreground bg-background p-0 gap-0 max-h-[90vh] overflow-y-auto">
         <DialogTitle className="sr-only">{track.title}</DialogTitle>
 
         {track.artwork_url && (
@@ -104,7 +104,7 @@ function ExploreTrackDialog({
           </div>
 
           <Separator className="bg-muted-foreground/20" />
-          <ScrollArea className="max-h-[50vh]">
+          <div>
             {loading ? (
               <span className="font-mono text-xs text-muted-foreground">loading…</span>
             ) : tracklist.length === 0 ? (
@@ -130,7 +130,7 @@ function ExploreTrackDialog({
                 ))}
               </div>
             )}
-          </ScrollArea>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
