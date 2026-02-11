@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
       updates.artwork_url = artworkUrl || null;
     }
 
-    if (Object.keys(updates).length === 0) {
+    if (Object.keys(updates).length === 0 && !Array.isArray(genres)) {
       return new Response(
         JSON.stringify({ success: false, error: "No fields to update" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
