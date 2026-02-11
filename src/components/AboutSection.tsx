@@ -5,15 +5,12 @@ function ArenaIcon({ size = 16 }: { size?: number }) {
     <svg
       width={size}
       height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+      viewBox="0 0 100 100"
+      fill="currentColor"
     >
-      <rect x="3" y="3" width="18" height="18" rx="0" />
-      <circle cx="12" cy="12" r="4" />
+      {/* Two overlapping 6-pointed stars with diamond negative space */}
+      <path d="M35 50 L20 35 L35 5 L50 35 L65 5 L80 35 L65 50 L80 65 L65 95 L50 65 L35 95 L20 65 Z" fillRule="evenodd" />
+      <path d="M42 50 L50 42 L58 50 L50 58 Z" fill="var(--arena-bg, hsl(60 10% 95%))" />
     </svg>
   );
 }
