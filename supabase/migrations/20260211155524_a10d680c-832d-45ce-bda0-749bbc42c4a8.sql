@@ -1,0 +1,1 @@
+ALTER TABLE station_config ADD COLUMN pwa_enabled boolean NOT NULL DEFAULT false;
