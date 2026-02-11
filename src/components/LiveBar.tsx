@@ -16,6 +16,7 @@ export default function LiveBar() {
     liveData,
     liveLoading,
     mixElapsed,
+    realDuration,
     volume,
     togglePlay,
     playLive,
@@ -40,14 +41,14 @@ export default function LiveBar() {
       title = liveData.now_playing.title;
       artist = liveData.now_playing.artist;
       elapsed = liveData.elapsed_seconds;
-      duration = liveData.now_playing.duration_seconds;
+      duration = realDuration ?? liveData.now_playing.duration_seconds;
       artworkUrl = (liveData.now_playing as any).artwork_url ?? null;
     }
   } else if (currentMix) {
     title = currentMix.title;
     artist = currentMix.artist;
     elapsed = mixElapsed;
-    duration = currentMix.duration_seconds;
+    duration = realDuration ?? currentMix.duration_seconds;
     artworkUrl = currentMix.artwork_url;
   }
 
