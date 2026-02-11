@@ -219,7 +219,7 @@ export default function MixRow({ mix, index, total }: { mix: Track; index: numbe
 
             {/* Tracklist */}
             <Separator className="bg-muted-foreground/20" />
-            <ScrollArea className="max-h-60">
+            <ScrollArea className="max-h-[50vh]">
               {loading ? (
                 <span className="font-mono text-xs text-muted-foreground">loading…</span>
               ) : tracks.length === 0 ? (

@@ -109,7 +109,7 @@ export default function TracklistDialog({ track, open, onOpenChange }: Props) {
           <span className="meter-label">TRACKLIST — {track.title.toUpperCase()}</span>
         </div>
 
-        <ScrollArea className="max-h-72 p-4">
+        <ScrollArea className="max-h-[50vh] p-4">
           {loading ? (
             <p className="meter-label">LOADING...</p>
           ) : entries.length === 0 ? (
@@ -154,24 +154,28 @@ export default function TracklistDialog({ track, open, onOpenChange }: Props) {
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2 py-1 group">
-                      <span className="meter-label text-foreground w-6 text-right">{String(entry.position).padStart(2, "0")}</span>
-                      <span className="meter-label text-foreground w-16 shrink-0">{entry.timestamp_label || "—"}</span>
-                      <span className="text-xs font-mono truncate flex-1">
-                        {entry.track_artist.toUpperCase()} — {entry.track_title.toUpperCase()}
-                      </span>
-                      <button
-                        onClick={() => startEdit(entry)}
-                        className="meter-label text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        [EDIT]
-                      </button>
-                      <button
-                        onClick={() => handleDelete(entry.id)}
-                        className="opacity-0 group-hover:opacity-100 meter-label text-muted-foreground hover:text-destructive transition-opacity"
-                      >
-                        [DEL]
-                      </button>
+                    <div className="py-1.5 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="meter-label text-foreground w-6 text-right">{String(entry.position).padStart(2, "0")}</span>
+                        <span className="meter-label text-foreground w-16 shrink-0">{entry.timestamp_label || "—"}</span>
+                        <span className="text-xs font-mono truncate flex-1">
+                          {entry.track_artist.toUpperCase()} — {entry.track_title.toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="flex gap-2 pl-8">
+                        <button
+                          onClick={() => startEdit(entry)}
+                          className="meter-label text-muted-foreground hover:text-foreground transition-colors px-2 py-1 border border-foreground/20 hover:border-foreground"
+                        >
+                          [EDIT]
+                        </button>
+                        <button
+                          onClick={() => handleDelete(entry.id)}
+                          className="meter-label text-muted-foreground hover:text-destructive transition-colors px-2 py-1 border border-foreground/20 hover:border-destructive"
+                        >
+                          [DEL]
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>

@@ -30,14 +30,23 @@ export function useTracksByGenre(selectedGenres: string[]) {
         return data as unknown as Track[];
       }
 
-      // Get track IDs matching selected genres
+      // Get track IDs matching ALL selected genres (AND logic)
       const { data: genreData, error: genreError } = await supabase
         .from("track_genres" as any)
-        .select("track_id")
+        .select("track_id, genre")
         .in("genre", selectedGenres);
       if (genreError) throw genreError;
 
-      const trackIds = [...new Set((genreData as any[]).map((r) => r.track_id as string))];
+      // Group by track_id and count distinct matched genres
+      const countMap: Record<string, Set<string>> = {};
+      (genreData as any[]).forEach((r) => {
+        if (!countMap[r.track_id]) countMap[r.track_id] = new Set();
+        countMap[r.track_id].add(r.genre);
+      });
+      // Only include tracks that match ALL selected genres
+      const trackIds = Object.entries(countMap)
+        .filter(([, genres]) => genres.size === selectedGenres.length)
+        .map(([id]) => id);
       if (trackIds.length === 0) return [];
 
       const { data, error } = await supabase
