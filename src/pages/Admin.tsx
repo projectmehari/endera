@@ -6,7 +6,9 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowUp, ArrowDown, Pencil } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import TracklistDialog from "@/components/TracklistDialog";
+import { useTrackGenres } from "@/hooks/useGenres";
 import type { Track } from "@/lib/radio-types";
 
 function AdminLogin({ onLogin }: { onLogin: () => void }) {
@@ -78,12 +80,14 @@ function EditTrackDialog({
   track: Track;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (fields: { title?: string; artist?: string; artworkUrl?: string }) => Promise<void>;
+  onSave: (fields: { title?: string; artist?: string; artworkUrl?: string; genres?: string[] }) => Promise<void>;
 }) {
   const [editTitle, setEditTitle] = useState(track.title);
   const [editArtist, setEditArtist] = useState(track.artist);
+  const [editGenres, setEditGenres] = useState("");
   const [saving, setSaving] = useState(false);
   const [artworkFile, setArtworkFile] = useState<File | null>(null);
+  const { data: existingGenres } = useTrackGenres(track.id);
 
   useEffect(() => {
     setEditTitle(track.title);
@@ -91,10 +95,17 @@ function EditTrackDialog({
     setArtworkFile(null);
   }, [track]);
 
+  useEffect(() => {
+    if (existingGenres) setEditGenres(existingGenres.join(", "));
+  }, [existingGenres]);
+
   const handleSave = async () => {
     setSaving(true);
-    const fields: { title?: string; artist?: string; artworkUrl?: string } = {};
+    const fields: { title?: string; artist?: string; artworkUrl?: string; genres?: string[] } = {};
     if (editTitle.trim() !== track.title) fields.title = editTitle.trim();
+    if (editArtist.trim() !== track.artist) fields.artist = editArtist.trim();
+    // Always send genres to allow updates
+    fields.genres = editGenres.split(",").map(g => g.trim().toLowerCase()).filter(g => g.length > 0);
     if (editArtist.trim() !== track.artist) fields.artist = editArtist.trim();
 
     if (artworkFile) {
@@ -136,6 +147,10 @@ function EditTrackDialog({
             )}
             <Input type="file" accept="image/*" onChange={(e) => setArtworkFile(e.target.files?.[0] || null)} className="mt-1 font-mono text-xs" />
           </div>
+          <div>
+            <Label className="meter-label">GENRES (COMMA-SEPARATED)</Label>
+            <Input value={editGenres} onChange={(e) => setEditGenres(e.target.value)} placeholder="ambient, house, techno" className="mt-1 font-mono text-xs" />
+          </div>
           <button
             onClick={handleSave}
             disabled={saving}
@@ -158,7 +173,9 @@ function TrackManager() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [title, setTitle] = useState("");
   const [artist, setArtist] = useState("");
+  const [genres, setGenres] = useState("");
   const [publishedDate, setPublishedDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [trackGenresMap, setTrackGenresMap] = useState<Record<string, string[]>>({});
   const [sortAsc, setSortAsc] = useState(true);
   const [pwaEnabled, setPwaEnabled] = useState(false);
   const [pwaLoading, setPwaLoading] = useState(false);
@@ -174,6 +191,16 @@ function TrackManager() {
       .order("published_date", { ascending: sortAsc });
     setTracks((data as unknown as Track[]) || []);
     setLoading(false);
+    // Fetch all genres
+    const { data: genreData } = await supabase.from("track_genres" as any).select("track_id, genre");
+    if (genreData) {
+      const map: Record<string, string[]> = {};
+      (genreData as any[]).forEach((r) => {
+        if (!map[r.track_id]) map[r.track_id] = [];
+        map[r.track_id].push(r.genre);
+      });
+      setTrackGenresMap(map);
+    }
   };
 
   useEffect(() => { fetchTracks(); }, [sortAsc]);
@@ -247,12 +274,14 @@ function TrackManager() {
 
       const durationSeconds = Math.round(file.size / 24000);
 
+      const genresArray = genres.split(",").map(g => g.trim().toLowerCase()).filter(g => g.length > 0);
+
       const { data, error } = await supabase.functions.invoke("admin-upload", {
-        body: { token, title, artist: artist || "Unknown", fileUrl: urlData.publicUrl, durationSeconds, artworkUrl, publishedDate },
+        body: { token, title, artist: artist || "Unknown", fileUrl: urlData.publicUrl, durationSeconds, artworkUrl, publishedDate, genres: genresArray },
       });
       if (error || !data?.success) throw new Error(data?.error || "Upload failed");
       toast({ title: "TRACK UPLOADED" });
-      setTitle(""); setArtist(""); setPublishedDate(new Date().toISOString().slice(0, 10));
+      setTitle(""); setArtist(""); setGenres(""); setPublishedDate(new Date().toISOString().slice(0, 10));
       if (fileRef.current) fileRef.current.value = "";
       if (artworkRef.current) artworkRef.current.value = "";
       fetchTracks();
@@ -286,7 +315,7 @@ function TrackManager() {
     if (!error && data?.success) { toast({ title: "DATE UPDATED" }); fetchTracks(); }
   };
 
-  const updateTrackMeta = async (trackId: string, fields: { title?: string; artist?: string; artworkUrl?: string }) => {
+  const updateTrackMeta = async (trackId: string, fields: { title?: string; artist?: string; artworkUrl?: string; genres?: string[] }) => {
     const { data, error } = await supabase.functions.invoke("admin-update-track", {
       body: { token, trackId, ...fields },
     });
@@ -342,6 +371,10 @@ function TrackManager() {
               <Label className="meter-label">ARTWORK IMAGE (OPTIONAL)</Label>
               <Input ref={artworkRef} type="file" accept="image/*" className="mt-1 font-mono text-xs" />
             </div>
+            <div>
+              <Label className="meter-label">GENRES (COMMA-SEPARATED)</Label>
+              <Input value={genres} onChange={(e) => setGenres(e.target.value)} placeholder="ambient, house, techno" className="mt-1 font-mono text-xs" />
+            </div>
             {uploading && (
               <div className="space-y-1">
                 <div className="flex items-center justify-between">
@@ -387,7 +420,12 @@ function TrackManager() {
                   )}
                   <div className="flex-1 min-w-0">
                     <span className="text-xs font-mono uppercase truncate block">{track.title}</span>
-                    <span className="meter-label">{track.artist.toUpperCase()}</span>
+                    <div className="flex items-center gap-1 flex-wrap">
+                      <span className="meter-label">{track.artist.toUpperCase()}</span>
+                      {(trackGenresMap[track.id] || []).map((g) => (
+                        <Badge key={g} variant="outline" className="text-[8px] px-1 py-0 leading-tight font-mono uppercase">{g}</Badge>
+                      ))}
+                    </div>
                   </div>
                   <input
                     type="date"

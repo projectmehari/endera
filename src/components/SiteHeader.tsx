@@ -12,6 +12,9 @@ export default function SiteHeader() {
           <Link to="/" className="meter-label hover:text-foreground transition-colors">
             HOME
           </Link>
+          <Link to="/explore" className="meter-label hover:text-foreground transition-colors">
+            EXPLORE
+          </Link>
           <Link to="/tools" className="meter-label hover:text-foreground transition-colors">
             TOOLS
           </Link>

@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { token, title, artist, fileUrl, durationSeconds, artworkUrl, publishedDate } = await req.json();
+    const { token, title, artist, fileUrl, durationSeconds, artworkUrl, publishedDate, genres } = await req.json();
 
     if (!(await verifyToken(token))) {
       return new Response(
@@ -87,11 +87,23 @@ Deno.serve(async (req) => {
       insertData.published_date = publishedDate;
     }
 
-    const { error: insertError } = await supabase.from("tracks").insert(insertData);
+    const { data: insertedTrack, error: insertError } = await supabase.from("tracks").insert(insertData).select("id").single();
 
-    if (insertError) {
+    if (insertError || !insertedTrack) {
       console.error("Insert error:", insertError);
       throw new Error("Insert failed");
+    }
+
+    // Insert genres if provided
+    if (Array.isArray(genres) && genres.length > 0) {
+      const genreRows = genres
+        .map((g: string) => (typeof g === "string" ? g.trim().toLowerCase() : ""))
+        .filter((g: string) => g.length > 0)
+        .map((genre: string) => ({ track_id: insertedTrack.id, genre }));
+      if (genreRows.length > 0) {
+        const { error: genreError } = await supabase.from("track_genres").insert(genreRows);
+        if (genreError) console.error("Genre insert error:", genreError);
+      }
     }
 
     return new Response(
