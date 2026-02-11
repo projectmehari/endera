@@ -10,6 +10,7 @@ import Tools from "./pages/Tools";
 import Explore from "./pages/Explore";
 import Install from "./pages/Install";
 import NotFound from "./pages/NotFound";
+import LiveChat from "./components/LiveChat";
 
 const queryClient = new QueryClient();
 
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/install" element={<Install />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <LiveChat />
         </AudioPlayerProvider>
       </BrowserRouter>
     </TooltipProvider>
