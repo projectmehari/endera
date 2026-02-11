@@ -12,9 +12,9 @@ const Index = () => (
       <LiveBar />
     </div>
     <main className="flex-1 px-4 py-8 md:px-8">
-      <div className="max-w-5xl mx-auto space-y-10">
+      <div className="max-w-5xl mx-auto space-y-6">
         <AboutSection />
-        <div className="border-t border-foreground pt-6">
+        <div className="border-t border-foreground pt-4">
           <span className="meter-label">— LATEST TRACKS —</span>
         </div>
         <MixFeed />
