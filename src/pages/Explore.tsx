@@ -111,7 +111,7 @@ export default function Explore() {
         ) : tracks.length === 0 ? (
           <p className="meter-label p-2">NO TRACKS MATCH YOUR SELECTION</p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 items-start">
             {tracks.map((track) => {
               const isActive = currentMix?.id === track.id;
               const trackGenres = trackGenresMap[track.id] || [];
