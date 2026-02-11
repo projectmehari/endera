@@ -413,8 +413,8 @@ function TrackManager() {
               <p className="meter-label p-2">NO TRACKS LOADED</p>
             ) : (
               tracks.map((track, i) => (
-                <div key={track.id} className="flex items-center gap-2 py-1.5 px-2 receipt-line last:border-0 group hover:bg-secondary transition-colors">
-                  <span className="meter-label text-foreground w-5 text-right">{String(i + 1).padStart(2, "0")}</span>
+                <div key={track.id} className="flex flex-wrap items-center gap-2 py-1.5 px-2 receipt-line last:border-0 group hover:bg-secondary transition-colors">
+                  <span className="meter-label text-foreground w-5 text-right shrink-0">{String(i + 1).padStart(2, "0")}</span>
                   {track.artwork_url && (
                     <img src={track.artwork_url} alt="" className="w-6 h-6 border border-foreground object-cover shrink-0" />
                   )}
@@ -427,16 +427,18 @@ function TrackManager() {
                       ))}
                     </div>
                   </div>
-                  <input
-                    type="date"
-                    value={track.published_date || ""}
-                    onChange={(e) => updatePublishedDate(track.id, e.target.value)}
-                    className="meter-label text-foreground bg-transparent border-none font-mono text-[10px] w-24 cursor-pointer"
-                  />
-                  <span className="meter-label text-foreground">
-                    {Math.floor(track.duration_seconds / 60)}:{(track.duration_seconds % 60).toString().padStart(2, "0")}
-                  </span>
-                  <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-2 shrink-0">
+                    <input
+                      type="date"
+                      value={track.published_date || ""}
+                      onChange={(e) => updatePublishedDate(track.id, e.target.value)}
+                      className="meter-label text-foreground bg-transparent border-none font-mono text-[10px] w-24 cursor-pointer"
+                    />
+                    <span className="meter-label text-foreground whitespace-nowrap">
+                      {Math.floor(track.duration_seconds / 60)}:{(track.duration_seconds % 60).toString().padStart(2, "0")}
+                    </span>
+                  </div>
+                  <div className="flex gap-0.5 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
                     <button onClick={() => moveTrack(track.id, "up")} disabled={i === 0} className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-20">
                       <ArrowUp className="w-3 h-3" />
                     </button>
