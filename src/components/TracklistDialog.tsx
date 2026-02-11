@@ -162,7 +162,7 @@ export default function TracklistDialog({ track, open, onOpenChange }: Props) {
                       </span>
                       <button
                         onClick={() => startEdit(entry)}
-                        className="opacity-0 group-hover:opacity-100 meter-label text-muted-foreground hover:text-foreground transition-opacity"
+                        className="meter-label text-muted-foreground hover:text-foreground transition-colors"
                       >
                         [EDIT]
                       </button>
