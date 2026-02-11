@@ -1,18 +1,37 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
+import LiveBar from "@/components/LiveBar";
 import { useGenres, useTracksByGenre } from "@/hooks/useGenres";
 import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Explore() {
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [search, setSearch] = useState("");
   const { data: genres = [], isLoading: genresLoading } = useGenres();
   const { data: tracks = [], isLoading: tracksLoading } = useTracksByGenre(selectedGenres);
-  const { playMix, currentMix, isPlaying } = useAudioPlayer();
+  const { playMix, currentMix } = useAudioPlayer();
+  const [trackGenresMap, setTrackGenresMap] = useState<Record<string, string[]>>({});
+
+  // Fetch all track genres for badge display
+  useEffect(() => {
+    supabase
+      .from("track_genres" as any)
+      .select("track_id, genre")
+      .then(({ data }) => {
+        if (data) {
+          const map: Record<string, string[]> = {};
+          (data as any[]).forEach((r) => {
+            if (!map[r.track_id]) map[r.track_id] = [];
+            map[r.track_id].push(r.genre);
+          });
+          setTrackGenresMap(map);
+        }
+      });
+  }, []);
 
   const filteredGenres = useMemo(() => {
     if (!search) return genres;
@@ -31,7 +50,9 @@ export default function Explore() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <SiteHeader />
+      <LiveBar />
       <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-6 md:px-8">
+        {/* Genre filter section */}
         <div className="meter-panel mb-6">
           <div className="border-b border-foreground px-4 py-2">
             <span className="meter-label">— EXPLORE BY GENRE —</span>
@@ -78,50 +99,107 @@ export default function Explore() {
           </div>
         </div>
 
-        <div className="meter-panel">
-          <div className="border-b border-foreground px-4 py-2 flex items-center justify-between">
-            <span className="meter-label">— TRACKS —</span>
-            <span className="meter-label">{tracks.length} RESULTS</span>
-          </div>
-          <div className="p-2">
-            {tracksLoading ? (
-              <p className="meter-label p-2">LOADING...</p>
-            ) : tracks.length === 0 ? (
-              <p className="meter-label p-2">NO TRACKS MATCH YOUR SELECTION</p>
-            ) : (
-              tracks.map((track, i) => {
-                const isActive = currentMix?.id === track.id;
-                return (
-                  <button
-                    key={track.id}
-                    onClick={() => playMix({ ...track, artwork_url: track.artwork_url || "", display_order: 0, description: null } as any)}
-                    className="w-full flex items-center gap-2 py-1.5 px-2 receipt-line last:border-0 hover:bg-secondary transition-colors text-left"
-                  >
-                    <span className="meter-label text-foreground w-5 text-right">
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                    {track.artwork_url && (
+        {/* Results header */}
+        <div className="flex items-center justify-between mb-4">
+          <span className="meter-label">— TRACKS —</span>
+          <span className="meter-label">{tracks.length} RESULTS</span>
+        </div>
+
+        {/* NTS-inspired card grid */}
+        {tracksLoading ? (
+          <p className="meter-label p-2">LOADING...</p>
+        ) : tracks.length === 0 ? (
+          <p className="meter-label p-2">NO TRACKS MATCH YOUR SELECTION</p>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            {tracks.map((track) => {
+              const isActive = currentMix?.id === track.id;
+              const trackGenres = trackGenresMap[track.id] || [];
+              return (
+                <button
+                  key={track.id}
+                  onClick={() =>
+                    playMix({
+                      ...track,
+                      artwork_url: track.artwork_url || "",
+                      display_order: 0,
+                      description: null,
+                    } as any)
+                  }
+                  className="group text-left border border-foreground/20 hover:border-foreground transition-colors bg-background"
+                >
+                  {/* Artwork */}
+                  <div className="aspect-square w-full overflow-hidden bg-secondary relative">
+                    {track.artwork_url ? (
                       <img
                         src={track.artwork_url}
-                        alt=""
-                        className="w-6 h-6 border border-foreground object-cover shrink-0"
+                        alt={track.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <span className="meter-label">NO ARTWORK</span>
+                      </div>
                     )}
-                    <div className="flex-1 min-w-0">
-                      <span className={`text-xs font-mono uppercase truncate block ${isActive ? "text-destructive" : ""}`}>
-                        {track.title}
-                      </span>
-                      <span className="meter-label">{track.artist.toUpperCase()}</span>
-                    </div>
-                    <span className="meter-label text-foreground shrink-0">
+                    {/* Duration overlay */}
+                    <span className="absolute bottom-1.5 right-1.5 bg-foreground/80 text-background text-[9px] font-mono px-1.5 py-0.5">
                       {formatDuration(track.duration_seconds)}
                     </span>
-                  </button>
-                );
-              })
-            )}
+                    {/* Playing indicator */}
+                    {isActive && (
+                      <div className="absolute top-1.5 left-1.5 flex items-center gap-1">
+                        <div className="meter-dot-active" />
+                        <span className="text-[8px] font-mono uppercase text-background bg-foreground/80 px-1">
+                          PLAYING
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Info */}
+                  <div className="p-2.5 space-y-1.5">
+                    {/* Date */}
+                    {track.published_date && (
+                      <span className="meter-label block">
+                        {new Date(track.published_date).toLocaleDateString("en-GB", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        }).toUpperCase()}
+                      </span>
+                    )}
+
+                    {/* Title & artist */}
+                    <p
+                      className={`text-xs font-mono font-bold uppercase leading-tight line-clamp-2 ${
+                        isActive ? "text-destructive" : "text-foreground"
+                      }`}
+                    >
+                      {track.title}
+                    </p>
+                    <p className="meter-label text-foreground/70">
+                      {track.artist.toUpperCase()}
+                    </p>
+
+                    {/* Genre tags */}
+                    {trackGenres.length > 0 && (
+                      <div className="flex flex-wrap gap-1 pt-1">
+                        {trackGenres.map((g) => (
+                          <span
+                            key={g}
+                            className="text-[8px] font-mono uppercase tracking-wider border border-foreground/30 px-1.5 py-0.5 text-muted-foreground"
+                          >
+                            {g}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
           </div>
-        </div>
+        )}
       </main>
       <SiteFooter />
     </div>
