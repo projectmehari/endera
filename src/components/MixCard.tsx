@@ -1,9 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
 import { useMixTracklist } from "@/hooks/useMixes";
 import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
-import { useFavorites } from "@/hooks/useFavorites";
-import { Play, Pause, Heart, ExternalLink } from "lucide-react";
+import { Play, Pause } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -48,9 +46,7 @@ function formatDuration(seconds: number) {
 }
 
 export default function MixRow({ mix, index, total }: { mix: Track; index: number; total: number }) {
-  const navigate = useNavigate();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const { isFavorite, toggle } = useFavorites();
   const [hovered, setHovered] = useState(false);
   const artworkColor = useArtworkColor(mix.artwork_url);
 
@@ -166,17 +162,6 @@ export default function MixRow({ mix, index, total }: { mix: Track; index: numbe
           <span className="font-mono text-sm text-muted-foreground shrink-0 ml-4">
             {formatDuration(probedDuration ?? mix.duration_seconds)}
           </span>
-
-          {/* Favorite */}
-          <button
-            onClick={(e) => { e.stopPropagation(); toggle(mix.id); }}
-            className={`ml-2 p-1 transition-colors shrink-0 ${
-              isFavorite(mix.id) ? "text-destructive" : "text-muted-foreground/30 hover:text-foreground"
-            }`}
-            title={isFavorite(mix.id) ? "Remove from favorites" : "Add to favorites"}
-          >
-            <Heart size={12} fill={isFavorite(mix.id) ? "currentColor" : "none"} />
-          </button>
         </div>
 
         {isActive && isPlaying && (
@@ -230,23 +215,8 @@ export default function MixRow({ mix, index, total }: { mix: Track; index: numbe
                   <Play size={16} fill="currentColor" className="ml-0.5" />
                 )}
               </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); toggle(mix.id); }}
-                className={`p-1.5 transition-colors ${
-                  isFavorite(mix.id) ? "text-destructive" : "text-muted-foreground hover:text-foreground"
-                }`}
-                title={isFavorite(mix.id) ? "Remove from favorites" : "Add to favorites"}
-              >
-                <Heart size={14} fill={isFavorite(mix.id) ? "currentColor" : "none"} />
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); navigate(`/mix/${mix.id}`); setDialogOpen(false); }}
-                className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
-                title="Open permalink"
-              >
-                <ExternalLink size={14} />
-              </button>
             </div>
+
             {/* Tracklist */}
             <Separator className="bg-muted-foreground/20" />
             <div>

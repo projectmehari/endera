@@ -9,7 +9,6 @@ import Admin from "./pages/Admin";
 import Tools from "./pages/Tools";
 import Explore from "./pages/Explore";
 import Install from "./pages/Install";
-import MixPermalink from "./pages/MixPermalink";
 import NotFound from "./pages/NotFound";
 import LiveChat from "./components/LiveChat";
 
@@ -27,7 +26,6 @@ const App = () => (
             <Route path="/explore" element={<Explore />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/tools" element={<Tools />} />
-            <Route path="/mix/:id" element={<MixPermalink />} />
             <Route path="/install" element={<Install />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
