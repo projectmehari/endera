@@ -21,7 +21,6 @@ interface AudioPlayerContextValue {
   mixElapsed: number;
   realDuration: number | null;
   volume: number;
-  audioRef: React.RefObject<HTMLAudioElement | null>;
   playLive: () => void;
   playMix: (mix: Mix) => void;
   pause: () => void;
@@ -216,7 +215,6 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
         mixElapsed,
         realDuration,
         volume,
-        audioRef,
         playLive,
         playMix,
         pause,
