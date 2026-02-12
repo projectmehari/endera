@@ -1,5 +1,6 @@
 import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
 import { Slider } from "@/components/ui/slider";
+import AudioVisualizer from "@/components/AudioVisualizer";
 import { SkipBack, SkipForward, Volume2 } from "lucide-react";
 
 function formatTime(seconds: number) {
@@ -100,6 +101,13 @@ export default function LiveBar() {
               <span className="meter-label">NO SIGNAL</span>
             )}
           </div>
+
+          {/* Visualizer */}
+          {hasTrack && isPlaying && (
+            <div className="hidden md:block meter-inset p-0.5 shrink-0">
+              <AudioVisualizer />
+            </div>
+          )}
 
           {/* Progress */}
           {hasTrack && (
