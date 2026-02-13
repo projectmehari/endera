@@ -1,59 +1,63 @@
 
 
-## Audio Visualizer for LiveBar
+# Plan: Readable Mix URLs, Dialog-Based Selection, and Download Button
 
-Add a Web Audio API frequency visualizer to the LiveBar, styled as an oscilloscope to match the industrial meter aesthetic.
+## Overview
 
-### What it will look like
-- A small bar (roughly 80px wide, 24px tall) sitting between the track info and the progress scrubber
-- Renders 16-24 thin vertical frequency bars in black on the cream background
-- Bars react to the currently playing audio in real-time
-- When paused or no track, bars drop to a flat line
-- Hidden on mobile to preserve space (matches the existing responsive pattern)
+Three changes: (1) make mix URLs human-readable like `/mix/artist/title`, (2) revert mix selection to open a dialog/popup instead of navigating to a new page, and (3) add a download button on the mix detail page.
 
-### Implementation
+---
 
-**1. Expose the audio element ref from AudioPlayerContext**
-- Add `audioRef` to the context value so the visualizer can connect a Web Audio `AnalyserNode` to the same `<audio>` element
-- Update the `AudioPlayerContextValue` interface to include `audioRef: React.RefObject<HTMLAudioElement | null>`
+## 1. Readable Mix URLs
 
-**2. Create `src/components/AudioVisualizer.tsx`**
-- A canvas-based component that:
-  - Accepts the `audioRef` from context
-  - On mount, creates an `AudioContext`, a `MediaElementSourceNode` (from the audio element), and an `AnalyserNode`
-  - Uses `requestAnimationFrame` to read frequency data and draw vertical bars on a small `<canvas>`
-  - Bars are drawn in `hsl(0 0% 8%)` (foreground black) to match the meter aesthetic
-  - Handles the "already connected" edge case (a `MediaElementSource` can only be created once per element, so the node is stored via a ref and reused)
-  - Cleans up the animation frame on unmount
+**Current**: `/mix/3e1a2fa4-9c3d-4954-a151-ae418c68f66f`
+**New**: `/mix/kiru/deserter`
 
-**3. Add the visualizer to `LiveBar.tsx`**
-- Import `AudioVisualizer` and render it in the `hidden md:flex` section, next to the progress slider
-- Only render when `hasTrack` is true and `isPlaying` is true
-- Wrapped in a `meter-inset` styled container for the recessed instrument look
+### How it works
+- Generate slugs from artist and title (lowercase, replace spaces/special chars with hyphens)
+- Route becomes `/mix/:artist/:title`
+- The `MixDetail` page will query the database matching on artist + title slugs instead of UUID
+- All links (`MixCard`, `Explore`) updated to generate the slug-based URL
 
-### Technical Details
+### Technical details
+- Add a `slugify()` utility to `src/lib/utils.ts`
+- Update route in `App.tsx`: `/mix/:artist/:title`
+- Update `MixDetail.tsx` to use `useParams<{ artist: string; title: string }>()` and query tracks by matching slugified artist/title
+- Update `MixCard.tsx` and `Explore.tsx` navigate calls to use `/mix/${slugify(artist)}/${slugify(title)}`
 
-```text
-AudioPlayerContext
-  audioRef ──> <audio> element
-                  │
-AudioVisualizer   │
-  AudioContext ───┤
-  createMediaElementSource(audioRef.current)
-       │
-  AnalyserNode
-       │
-  getByteFrequencyData() ──> canvas bars
-```
+---
 
-- The `MediaElementSourceNode` is created lazily on first play and cached so it is never duplicated
-- `fftSize` set to 64 (gives 32 frequency bins; we draw ~16-24 of them)
-- Canvas uses `devicePixelRatio` for crisp rendering
-- Animation loop pauses when `isPlaying` is false to save CPU
+## 2. Revert to Dialog-Based Mix Selection
 
-### Files changed
+Clicking a mix row (homepage) or explore card will open a popup/dialog with the mix details (artwork, title, date, tracklist, play button, download) instead of navigating away.
+
+### Technical details
+- **MixCard.tsx**: Replace `navigate()` with state to open a Dialog. Add a `<Dialog>` component inline that shows the mix detail content (artwork, title, artist, duration, tracklist, play/download buttons)
+- **Explore.tsx**: Same approach -- clicking a card opens a Dialog with the mix details and tracklist (fetched on open)
+- **MixDetail.tsx**: Keep the dedicated page as-is for the readable URL route (direct link / sharing). The dialog and the page share the same visual layout
+- Create a shared `MixDetailContent` component used by both the Dialog and the standalone page to avoid duplication
+
+---
+
+## 3. Add Download Button
+
+Add a download option on both the mix detail page and the dialog.
+
+### Technical details
+- Add a download button (using lucide `Download` icon) next to the play button
+- Uses an `<a>` tag with `href={mix.file_url}` and `download` attribute to trigger browser download
+- Styled consistently with the existing play button (rounded circle, border, same size)
+
+---
+
+## Files to modify
+
 | File | Change |
 |------|--------|
-| `src/contexts/AudioPlayerContext.tsx` | Expose `audioRef` in context value |
-| `src/components/AudioVisualizer.tsx` | New component (canvas + Web Audio) |
-| `src/components/LiveBar.tsx` | Import and render the visualizer |
+| `src/lib/utils.ts` | Add `slugify()` function |
+| `src/App.tsx` | Update route to `/mix/:artist/:title` |
+| `src/components/MixDetailContent.tsx` | **New** -- shared mix detail UI (artwork, info, tracklist, play, download) |
+| `src/pages/MixDetail.tsx` | Use slug params to fetch mix, render `MixDetailContent` |
+| `src/components/MixCard.tsx` | Replace navigate with Dialog, render `MixDetailContent` inside |
+| `src/pages/Explore.tsx` | Replace navigate with Dialog, render `MixDetailContent` inside |
+
