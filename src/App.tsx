@@ -27,7 +27,7 @@ const App = () => (
             <Route path="/explore" element={<Explore />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/tools" element={<Tools />} />
-            <Route path="/mix/:id" element={<MixDetail />} />
+            <Route path="/mix/:artist/:title" element={<MixDetail />} />
             <Route path="/install" element={<Install />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
