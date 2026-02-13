@@ -59,8 +59,9 @@ Deno.serve(async (req) => {
       .not("id", "is", null);
 
     if (error) {
+      console.error("config update error:", error);
       return new Response(
-        JSON.stringify({ success: false, error: error.message }),
+        JSON.stringify({ success: false, error: "Failed to update configuration" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
