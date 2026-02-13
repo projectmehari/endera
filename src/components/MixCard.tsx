@@ -1,10 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { useMixTracklist } from "@/hooks/useMixes";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
 import { Play, Pause } from "lucide-react";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import type { Track } from "@/lib/radio-types";
 
 function useArtworkColor(url: string | null) {
@@ -46,7 +43,7 @@ function formatDuration(seconds: number) {
 }
 
 export default function MixRow({ mix, index, total }: { mix: Track; index: number; total: number }) {
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const navigate = useNavigate();
   const [hovered, setHovered] = useState(false);
   const artworkColor = useArtworkColor(mix.artwork_url);
 
@@ -62,7 +59,6 @@ export default function MixRow({ mix, index, total }: { mix: Track; index: numbe
     }
   }, [hovered, artworkColor]);
   const [probedDuration, setProbedDuration] = useState<number | null>(null);
-  const { tracks, loading } = useMixTracklist(dialogOpen ? mix.id : null);
 
   // Probe real audio duration
   useEffect(() => {
@@ -106,12 +102,11 @@ export default function MixRow({ mix, index, total }: { mix: Track; index: numbe
   };
 
   return (
-    <>
       <div className="border-b border-muted-foreground/20">
         <div
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
-          onClick={() => setDialogOpen(true)}
+          onClick={() => navigate(`/mix/${mix.id}`)}
           className={`flex items-center px-2 py-4 md:px-4 transition-colors hover:bg-muted/30 cursor-pointer ${
             isActive ? "bg-muted/60" : ""
           }`}
@@ -167,88 +162,6 @@ export default function MixRow({ mix, index, total }: { mix: Track; index: numbe
         {isActive && isPlaying && (
           <div className="h-[2px] bg-foreground" />
         )}
-      </div>
-
-      {/* Detail Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md border-foreground bg-background p-0 gap-0 max-h-[90vh] overflow-y-auto">
-          <DialogTitle className="sr-only">{mix.title}</DialogTitle>
-
-          {mix.artwork_url && (
-            <img
-              src={mix.artwork_url}
-              alt={mix.title}
-              className="w-full aspect-square object-cover"
-            />
-          )}
-
-          <div className="px-5 py-4 space-y-3">
-            {/* Info + Play */}
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <h3 className="font-mono text-sm text-foreground truncate">
-                  {mix.title.toLowerCase()}
-                </h3>
-                <p className="font-mono text-[10px] tracking-widest text-muted-foreground/60 uppercase">
-                  {mix.artist}
-                </p>
-                <p className="font-mono text-xs text-muted-foreground mt-1">
-                  {formatDuration(probedDuration ?? mix.duration_seconds)}
-                  {mix.published_date && (
-                    <span className="ml-3 text-muted-foreground/60">
-                      {new Date(mix.published_date + "T00:00:00").toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
-                    </span>
-                  )}
-                </p>
-              </div>
-              <button
-                onClick={handlePlay}
-                className={`w-9 h-9 flex items-center justify-center shrink-0 rounded-full border transition-colors ${
-                  isActive
-                    ? "border-foreground text-foreground"
-                    : "border-muted-foreground/40 text-muted-foreground hover:border-foreground hover:text-foreground"
-                }`}
-              >
-                {isActive && isPlaying ? (
-                  <Pause size={16} fill="currentColor" />
-                ) : (
-                  <Play size={16} fill="currentColor" className="ml-0.5" />
-                )}
-              </button>
-            </div>
-
-            {/* Tracklist */}
-            <Separator className="bg-muted-foreground/20" />
-            <div>
-              {loading ? (
-                <span className="font-mono text-xs text-muted-foreground">loading…</span>
-              ) : tracks.length === 0 ? (
-                <span className="font-mono text-xs text-muted-foreground">no tracklist available</span>
-              ) : (
-                <div className="space-y-2.5 pr-3">
-                  {tracks.map((t) => (
-                    <div key={t.id} className="flex gap-3 font-mono text-xs">
-                      <span className="w-[4.5rem] shrink-0 text-muted-foreground/50 pt-0.5">
-                        {t.timestamp_label
-                          ? t.timestamp_label.replace(/\b(\d)\b/g, "0$1")
-                          : ""}
-                      </span>
-                      <div className="min-w-0">
-                        <span className="block font-bold text-foreground uppercase truncate">
-                          {t.track_artist}
-                        </span>
-                        <span className="block text-muted-foreground truncate">
-                          {t.track_title}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
+    </div>
   );
 }
