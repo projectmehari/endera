@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
         .select("*")
         .eq("mix_id", mix_id)
         .order("position", { ascending: true });
-      if (error) return json({ success: false, error: error.message }, 400);
+      if (error) { console.error("list error:", error); return json({ success: false, error: "Failed to list entries" }, 400); }
       return json({ success: true, entries: data });
     }
 
@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
         track_artist: track_artist || "Unknown",
         track_title,
       });
-      if (error) return json({ success: false, error: error.message }, 400);
+      if (error) { console.error("add error:", error); return json({ success: false, error: "Failed to add entry" }, 400); }
       return json({ success: true });
     }
 
@@ -83,13 +83,13 @@ Deno.serve(async (req) => {
         .from("mix_tracklists")
         .update(updates)
         .eq("id", entry_id);
-      if (error) return json({ success: false, error: error.message }, 400);
+      if (error) { console.error("update error:", error); return json({ success: false, error: "Failed to update entry" }, 400); }
       return json({ success: true });
     }
 
     if (action === "delete") {
       const { error } = await supabase.from("mix_tracklists").delete().eq("id", entry_id);
-      if (error) return json({ success: false, error: error.message }, 400);
+      if (error) { console.error("delete error:", error); return json({ success: false, error: "Failed to delete entry" }, 400); }
       return json({ success: true });
     }
 
