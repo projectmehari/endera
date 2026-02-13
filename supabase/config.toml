@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.admin-update-config]
 verify_jwt = false
+
+[functions.admin-delete-chat]
+verify_jwt = false
