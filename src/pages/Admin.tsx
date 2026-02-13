@@ -186,6 +186,71 @@ function EditTrackDialog({
   );
 }
 
+function ChatModerator() {
+  const [messages, setMessages] = useState<{ id: string; username: string; message: string; created_at: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+  const token = sessionStorage.getItem("admin_token") || "";
+
+  const fetchMessages = async () => {
+    const { data } = await supabase
+      .from("chat_messages")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(100);
+    setMessages((data as any[]) || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchMessages(); }, []);
+
+  const deleteMessage = async (id: string) => {
+    const { data, error } = await supabase.functions.invoke("admin-delete-chat", {
+      body: { token, messageId: id },
+    });
+    if (!error && data?.success) {
+      setMessages((prev) => prev.filter((m) => m.id !== id));
+      toast({ title: "MESSAGE DELETED" });
+    } else {
+      toast({ title: "DELETE FAILED", variant: "destructive" });
+    }
+  };
+
+  return (
+    <div className="meter-panel mb-4">
+      <div className="border-b border-foreground px-4 py-2 flex items-center justify-between">
+        <span className="meter-label">— CHAT MODERATION —</span>
+        <span className="meter-label">{messages.length} MESSAGES</span>
+      </div>
+      <div className="p-2 max-h-64 overflow-y-auto">
+        {loading ? (
+          <p className="meter-label p-2">LOADING...</p>
+        ) : messages.length === 0 ? (
+          <p className="meter-label p-2">NO MESSAGES</p>
+        ) : (
+          messages.map((msg) => (
+            <div key={msg.id} className="flex items-start gap-2 py-1 px-2 receipt-line last:border-0 group hover:bg-secondary transition-colors">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline gap-2">
+                  <span className="meter-value text-[10px]">{msg.username}</span>
+                  <span className="meter-label text-[9px]">{new Date(msg.created_at).toLocaleString()}</span>
+                </div>
+                <p className="text-xs font-mono truncate">{msg.message}</p>
+              </div>
+              <button
+                onClick={() => deleteMessage(msg.id)}
+                className="shrink-0 p-1 text-muted-foreground hover:text-destructive meter-label text-[10px]"
+              >
+                [DEL]
+              </button>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
 function TrackManager() {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [tracklistTrack, setTracklistTrack] = useState<Track | null>(null);
@@ -364,6 +429,9 @@ function TrackManager() {
             </div>
           </div>
         </div>
+
+        {/* Chat Moderation */}
+        <ChatModerator />
 
         {/* Upload */}
         <div className="meter-panel mb-4">
