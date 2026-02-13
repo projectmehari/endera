@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
 import { Play, Pause } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import MixDetailContent from "@/components/MixDetailContent";
+import { slugify } from "@/lib/utils";
 import type { Track } from "@/lib/radio-types";
 
 function useArtworkColor(url: string | null) {
@@ -43,11 +45,10 @@ function formatDuration(seconds: number) {
 }
 
 export default function MixRow({ mix, index, total }: { mix: Track; index: number; total: number }) {
-  const navigate = useNavigate();
   const [hovered, setHovered] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const artworkColor = useArtworkColor(mix.artwork_url);
 
-  // Apply a full-page color wash on hover via a fixed overlay
   useEffect(() => {
     const overlay = document.getElementById("artwork-color-overlay");
     if (!overlay) return;
@@ -58,9 +59,8 @@ export default function MixRow({ mix, index, total }: { mix: Track; index: numbe
       overlay.style.opacity = "0";
     }
   }, [hovered, artworkColor]);
-  const [probedDuration, setProbedDuration] = useState<number | null>(null);
 
-  // Probe real audio duration
+  const [probedDuration, setProbedDuration] = useState<number | null>(null);
   useEffect(() => {
     const audio = new Audio();
     audio.preload = "metadata";
@@ -76,8 +76,8 @@ export default function MixRow({ mix, index, total }: { mix: Track; index: numbe
       audio.src = "";
     };
   }, [mix.file_url]);
-  const { playMix, currentMix, mode, isPlaying, pause, resume } = useAudioPlayer();
 
+  const { playMix, currentMix, mode, isPlaying, pause, resume } = useAudioPlayer();
   const isActive = mode === "mix" && currentMix?.id === mix.id;
 
   const handlePlay = (e: React.MouseEvent) => {
@@ -101,17 +101,20 @@ export default function MixRow({ mix, index, total }: { mix: Track; index: numbe
     }
   };
 
+  // Shareable URL for this mix
+  const mixUrl = `/mix/${slugify(mix.artist)}/${slugify(mix.title)}`;
+
   return (
+    <>
       <div className="border-b border-muted-foreground/20">
         <div
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
-          onClick={() => navigate(`/mix/${mix.id}`)}
+          onClick={() => setDialogOpen(true)}
           className={`flex items-center px-2 py-4 md:px-4 transition-colors hover:bg-muted/30 cursor-pointer ${
             isActive ? "bg-muted/60" : ""
           }`}
         >
-          {/* Play button */}
           <button
             onClick={handlePlay}
             className={`w-8 h-8 flex items-center justify-center shrink-0 rounded-full border transition-colors ${
@@ -127,25 +130,15 @@ export default function MixRow({ mix, index, total }: { mix: Track; index: numbe
             )}
           </button>
 
-          {/* Artwork + Number */}
           {mix.artwork_url && (
-            <img
-              src={mix.artwork_url}
-              alt=""
-              className="w-8 h-8 border border-foreground object-cover shrink-0 ml-3"
-            />
+            <img src={mix.artwork_url} alt="" className="w-8 h-8 border border-foreground object-cover shrink-0 ml-3" />
           )}
           <span className="font-mono text-sm text-muted-foreground w-10 shrink-0 text-right mr-4 ml-3">
             {String(total - index).padStart(3, "0")}
           </span>
 
-          {/* Title + Artist label */}
           <div className="flex-1 min-w-0">
-            <span
-              className={`font-mono text-sm truncate block ${
-                isActive ? "text-foreground" : "text-muted-foreground"
-              }`}
-            >
+            <span className={`font-mono text-sm truncate block ${isActive ? "text-foreground" : "text-muted-foreground"}`}>
               {mix.title.toLowerCase()}
             </span>
             <span className="font-mono text-[10px] tracking-widest text-muted-foreground/60 uppercase">
@@ -153,15 +146,25 @@ export default function MixRow({ mix, index, total }: { mix: Track; index: numbe
             </span>
           </div>
 
-          {/* Duration */}
           <span className="font-mono text-sm text-muted-foreground shrink-0 ml-4">
             {formatDuration(probedDuration ?? mix.duration_seconds)}
           </span>
         </div>
 
-        {isActive && isPlaying && (
-          <div className="h-[2px] bg-foreground" />
-        )}
-    </div>
+        {isActive && isPlaying && <div className="h-[2px] bg-foreground" />}
+      </div>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto p-6">
+          <MixDetailContent mix={mix} />
+          <a
+            href={mixUrl}
+            className="block text-center font-mono text-[10px] text-muted-foreground/50 hover:text-muted-foreground mt-4 transition-colors"
+          >
+            permalink ↗
+          </a>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

@@ -1,5 +1,4 @@
 import { useState, useMemo, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import SiteHeader from "@/components/SiteHeader";
 import SiteFooter from "@/components/SiteFooter";
 import LiveBar from "@/components/LiveBar";
@@ -8,18 +7,20 @@ import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import MixDetailContent from "@/components/MixDetailContent";
+import { slugify } from "@/lib/utils";
 import type { Track } from "@/lib/radio-types";
 
 export default function Explore() {
-  const navigate = useNavigate();
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [search, setSearch] = useState("");
   const { data: genres = [], isLoading: genresLoading } = useGenres();
   const { data: tracks = [], isLoading: tracksLoading } = useTracksByGenre(selectedGenres);
   const { currentMix } = useAudioPlayer();
   const [trackGenresMap, setTrackGenresMap] = useState<Record<string, string[]>>({});
+  const [selectedTrack, setSelectedTrack] = useState<Track | null>(null);
 
-  // Fetch all track genres for badge display
   useEffect(() => {
     supabase
       .from("track_genres" as any)
@@ -104,13 +105,11 @@ export default function Explore() {
           </div>
         </div>
 
-        {/* Results header */}
         <div className="flex items-center justify-between mb-4">
           <span className="meter-label">— TRACKS —</span>
           <span className="meter-label">{tracks.length} RESULTS</span>
         </div>
 
-        {/* NTS-inspired card grid */}
         {tracksLoading ? (
           <p className="meter-label p-2">LOADING...</p>
         ) : tracks.length === 0 ? (
@@ -123,10 +122,9 @@ export default function Explore() {
               return (
                 <button
                   key={track.id}
-                  onClick={() => navigate(`/mix/${track.id}`)}
+                  onClick={() => setSelectedTrack(track)}
                   className="group text-left border border-foreground/20 hover:border-foreground transition-colors bg-background"
                 >
-                  {/* Artwork */}
                   <div className="aspect-square w-full overflow-hidden bg-secondary relative">
                     {track.artwork_url ? (
                       <img
@@ -140,11 +138,9 @@ export default function Explore() {
                         <span className="meter-label">NO ARTWORK</span>
                       </div>
                     )}
-                    {/* Duration overlay */}
                     <span className="absolute bottom-1.5 right-1.5 bg-foreground/80 text-background text-[9px] font-mono px-1.5 py-0.5">
                       {formatDuration(track.duration_seconds)}
                     </span>
-                    {/* Playing indicator */}
                     {isActive && (
                       <div className="absolute top-1.5 left-1.5 flex items-center gap-1">
                         <div className="meter-dot-active" />
@@ -154,8 +150,6 @@ export default function Explore() {
                       </div>
                     )}
                   </div>
-
-                  {/* Info */}
                   <div className="p-2.5 space-y-1.5">
                     {track.published_date && (
                       <span className="meter-label block">
@@ -166,23 +160,14 @@ export default function Explore() {
                         }).toUpperCase()}
                       </span>
                     )}
-                    <p
-                      className={`text-xs font-mono font-bold uppercase leading-tight line-clamp-2 ${
-                        isActive ? "text-destructive" : "text-foreground"
-                      }`}
-                    >
+                    <p className={`text-xs font-mono font-bold uppercase leading-tight line-clamp-2 ${isActive ? "text-destructive" : "text-foreground"}`}>
                       {track.title}
                     </p>
-                    <p className="meter-label text-foreground/70">
-                      {track.artist.toUpperCase()}
-                    </p>
+                    <p className="meter-label text-foreground/70">{track.artist.toUpperCase()}</p>
                     {trackGenres.length > 0 && (
                       <div className="flex flex-wrap gap-1 pt-1">
                         {trackGenres.map((g) => (
-                          <span
-                            key={g}
-                            className="text-[8px] font-mono uppercase tracking-wider border border-foreground/30 px-1.5 py-0.5 text-muted-foreground"
-                          >
+                          <span key={g} className="text-[8px] font-mono uppercase tracking-wider border border-foreground/30 px-1.5 py-0.5 text-muted-foreground">
                             {g}
                           </span>
                         ))}
@@ -196,6 +181,22 @@ export default function Explore() {
         )}
       </main>
       <SiteFooter />
+
+      <Dialog open={!!selectedTrack} onOpenChange={(open) => !open && setSelectedTrack(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto p-6">
+          {selectedTrack && (
+            <>
+              <MixDetailContent mix={selectedTrack} />
+              <a
+                href={`/mix/${slugify(selectedTrack.artist)}/${slugify(selectedTrack.title)}`}
+                className="block text-center font-mono text-[10px] text-muted-foreground/50 hover:text-muted-foreground mt-4 transition-colors"
+              >
+                permalink ↗
+              </a>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
