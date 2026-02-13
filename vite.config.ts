@@ -16,7 +16,7 @@ export default defineConfig(() => ({
     react(),
     VitePWA({
       registerType: "prompt",
-      includeAssets: ["favicon.ico", "robots.txt"],
+      includeAssets: ["favicon.svg", "robots.txt"],
       workbox: {
         navigateFallbackDenylist: [/^\/~oauth/],
         runtimeCaching: [
