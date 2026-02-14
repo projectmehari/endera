@@ -266,6 +266,9 @@ function TrackManager() {
   const [sortAsc, setSortAsc] = useState(true);
   const [pwaEnabled, setPwaEnabled] = useState(false);
   const [pwaLoading, setPwaLoading] = useState(false);
+  const [showInstagram, setShowInstagram] = useState(true);
+  const [showArena, setShowArena] = useState(true);
+  const [socialLoading, setSocialLoading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const artworkRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -293,8 +296,12 @@ function TrackManager() {
   useEffect(() => { fetchTracks(); }, [sortAsc]);
 
   useEffect(() => {
-    supabase.from("station_config").select("pwa_enabled").limit(1).single().then(({ data }) => {
-      if (data) setPwaEnabled(data.pwa_enabled ?? false);
+    supabase.from("station_config").select("pwa_enabled, show_instagram, show_arena").limit(1).single().then(({ data }) => {
+      if (data) {
+        setPwaEnabled((data as any).pwa_enabled ?? false);
+        setShowInstagram((data as any).show_instagram ?? true);
+        setShowArena((data as any).show_arena ?? true);
+      }
     });
   }, []);
 
@@ -310,6 +317,21 @@ function TrackManager() {
       toast({ title: "UPDATE FAILED", variant: "destructive" });
     }
     setPwaLoading(false);
+  };
+
+  const toggleSocial = async (field: "showInstagram" | "showArena", enabled: boolean) => {
+    setSocialLoading(true);
+    const { data, error } = await supabase.functions.invoke("admin-update-config", {
+      body: { token, [field]: enabled },
+    });
+    if (!error && data?.success) {
+      if (field === "showInstagram") setShowInstagram(enabled);
+      else setShowArena(enabled);
+      toast({ title: enabled ? "LINK ENABLED" : "LINK DISABLED" });
+    } else {
+      toast({ title: "UPDATE FAILED", variant: "destructive" });
+    }
+    setSocialLoading(false);
   };
 
   const handleUpload = async (e: React.FormEvent) => {
@@ -423,6 +445,14 @@ function TrackManager() {
               <div className="flex items-center gap-1.5">
                 <Label className="meter-label cursor-pointer" htmlFor="pwa-toggle">PWA</Label>
                 <Switch id="pwa-toggle" checked={pwaEnabled} onCheckedChange={togglePwa} disabled={pwaLoading} className="scale-75" />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Label className="meter-label cursor-pointer" htmlFor="ig-toggle">IG</Label>
+                <Switch id="ig-toggle" checked={showInstagram} onCheckedChange={(v) => toggleSocial("showInstagram", v)} disabled={socialLoading} className="scale-75" />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Label className="meter-label cursor-pointer" htmlFor="arena-toggle">ARE.NA</Label>
+                <Switch id="arena-toggle" checked={showArena} onCheckedChange={(v) => toggleSocial("showArena", v)} disabled={socialLoading} className="scale-75" />
               </div>
               <a href="/" className="meter-label hover:text-foreground transition-colors">[RADIO]</a>
               <button onClick={logout} className="meter-label hover:text-foreground transition-colors">[LOGOUT]</button>
