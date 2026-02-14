@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
 import { Play, Pause } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -44,7 +44,7 @@ function formatDuration(seconds: number) {
   return `00:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 }
 
-export default function MixRow({ mix, index, total }: { mix: Track; index: number; total: number }) {
+const MixRow = memo(function MixRow({ mix, index, total }: { mix: Track; index: number; total: number }) {
   const [hovered, setHovered] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const artworkColor = useArtworkColor(mix.artwork_url);
@@ -60,22 +60,6 @@ export default function MixRow({ mix, index, total }: { mix: Track; index: numbe
     }
   }, [hovered, artworkColor]);
 
-  const [probedDuration, setProbedDuration] = useState<number | null>(null);
-  useEffect(() => {
-    const audio = new Audio();
-    audio.preload = "metadata";
-    const onMeta = () => {
-      if (audio.duration && isFinite(audio.duration)) {
-        setProbedDuration(Math.round(audio.duration));
-      }
-    };
-    audio.addEventListener("loadedmetadata", onMeta);
-    audio.src = mix.file_url;
-    return () => {
-      audio.removeEventListener("loadedmetadata", onMeta);
-      audio.src = "";
-    };
-  }, [mix.file_url]);
 
   const { playMix, currentMix, mode, isPlaying, pause, resume } = useAudioPlayer();
   const isActive = mode === "mix" && currentMix?.id === mix.id;
@@ -147,7 +131,7 @@ export default function MixRow({ mix, index, total }: { mix: Track; index: numbe
           </div>
 
           <span className="font-mono text-sm text-muted-foreground shrink-0 ml-4">
-            {formatDuration(probedDuration ?? mix.duration_seconds)}
+            {formatDuration(mix.duration_seconds)}
           </span>
         </div>
 
@@ -167,4 +151,6 @@ export default function MixRow({ mix, index, total }: { mix: Track; index: numbe
       </Dialog>
     </>
   );
-}
+});
+
+export default MixRow;
