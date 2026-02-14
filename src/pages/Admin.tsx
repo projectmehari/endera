@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowUp, ArrowDown, Pencil } from "lucide-react";
+import { ArrowUp, ArrowDown, Pencil, Search } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import TracklistDialog from "@/components/TracklistDialog";
@@ -263,6 +263,8 @@ function TrackManager() {
   const [genres, setGenres] = useState("");
   const [publishedDate, setPublishedDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [trackGenresMap, setTrackGenresMap] = useState<Record<string, string[]>>({});
+  const [tracklistCounts, setTracklistCounts] = useState<Record<string, number>>({});
+  const [scanningId, setScanningId] = useState<string | null>(null);
   const [sortAsc, setSortAsc] = useState(true);
   const [pwaEnabled, setPwaEnabled] = useState(false);
   const [pwaLoading, setPwaLoading] = useState(false);
@@ -287,6 +289,15 @@ function TrackManager() {
         map[r.track_id].push(r.genre);
       });
       setTrackGenresMap(map);
+    }
+    // Fetch tracklist counts
+    const { data: tlData } = await supabase.from("mix_tracklists" as any).select("mix_id");
+    if (tlData) {
+      const counts: Record<string, number> = {};
+      (tlData as any[]).forEach((r) => {
+        counts[r.mix_id] = (counts[r.mix_id] || 0) + 1;
+      });
+      setTracklistCounts(counts);
     }
   };
 
@@ -408,6 +419,26 @@ function TrackManager() {
     });
     if (!error && data?.success) { toast({ title: "TRACK UPDATED" }); fetchTracks(); }
     else { toast({ title: "UPDATE FAILED", variant: "destructive" }); }
+  };
+
+  const shazamScan = async (trackId: string) => {
+    setScanningId(trackId);
+    toast({ title: "SHAZAM SCANNING...", description: "This may take a minute" });
+    try {
+      const { data, error } = await supabase.functions.invoke("shazam-scan", {
+        body: { token, mix_id: trackId },
+      });
+      if (error || !data?.success) {
+        toast({ title: "SCAN FAILED", description: data?.error || "Unknown error", variant: "destructive" });
+      } else {
+        toast({ title: `SCAN COMPLETE`, description: `Detected ${data.detected_count} tracks` });
+        fetchTracks();
+      }
+    } catch {
+      toast({ title: "SCAN ERROR", variant: "destructive" });
+    } finally {
+      setScanningId(null);
+    }
   };
 
   const logout = () => { sessionStorage.removeItem("admin_token"); window.location.reload(); };
@@ -548,7 +579,19 @@ function TrackManager() {
                       <ArrowDown className="w-3 h-3" />
                     </button>
                     <button onClick={() => deleteTrack(track)} className="p-1 text-muted-foreground hover:text-destructive meter-label">[DEL]</button>
-                    <button onClick={() => setTracklistTrack(track)} className="p-1 text-muted-foreground hover:text-foreground meter-label">[TL]</button>
+                    <button onClick={() => setTracklistTrack(track)} className="p-1 text-muted-foreground hover:text-foreground meter-label">
+                      [TL{tracklistCounts[track.id] ? `:${tracklistCounts[track.id]}` : ""}]
+                    </button>
+                    {!tracklistCounts[track.id] && (
+                      <button
+                        onClick={() => shazamScan(track.id)}
+                        disabled={scanningId === track.id}
+                        className="p-1 text-muted-foreground hover:text-foreground disabled:animate-pulse meter-label"
+                        title="Shazam scan"
+                      >
+                        {scanningId === track.id ? "[...]" : "[SCAN]"}
+                      </button>
+                    )}
                     <button onClick={() => setEditTrack(track)} className="p-1 text-muted-foreground hover:text-foreground"><Pencil className="w-3 h-3" /></button>
                   </div>
                 </div>
