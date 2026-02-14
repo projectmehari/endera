@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.admin-delete-chat]
 verify_jwt = false
+
+[functions.shazam-scan]
+verify_jwt = false
