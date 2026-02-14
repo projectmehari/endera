@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { token, pwaEnabled } = await req.json();
+    const { token, pwaEnabled, showInstagram, showArena } = await req.json();
     const secret = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     if (!token || !(await verifyToken(token, secret))) {
@@ -53,9 +53,14 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    const updateFields: Record<string, unknown> = {};
+    if (pwaEnabled !== undefined) updateFields.pwa_enabled = pwaEnabled;
+    if (showInstagram !== undefined) updateFields.show_instagram = showInstagram;
+    if (showArena !== undefined) updateFields.show_arena = showArena;
+
     const { error } = await supabase
       .from("station_config")
-      .update({ pwa_enabled: pwaEnabled })
+      .update(updateFields)
       .not("id", "is", null);
 
     if (error) {

@@ -114,6 +114,8 @@ export type Database = {
           id: string
           playlist_started_at: string
           pwa_enabled: boolean
+          show_arena: boolean
+          show_instagram: boolean
           station_name: string
           updated_at: string
         }
@@ -121,6 +123,8 @@ export type Database = {
           id?: string
           playlist_started_at?: string
           pwa_enabled?: boolean
+          show_arena?: boolean
+          show_instagram?: boolean
           station_name?: string
           updated_at?: string
         }
@@ -128,6 +132,8 @@ export type Database = {
           id?: string
           playlist_started_at?: string
           pwa_enabled?: boolean
+          show_arena?: boolean
+          show_instagram?: boolean
           station_name?: string
           updated_at?: string
         }
