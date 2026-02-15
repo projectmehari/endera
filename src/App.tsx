@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AudioPlayerProvider } from "@/contexts/AudioPlayerContext";
 import { lazy, Suspense } from "react";
+import { Analytics } from "@vercel/analytics/react";
 import Index from "./pages/Index";
 
 const Admin = lazy(() => import("./pages/Admin"));
@@ -38,6 +39,7 @@ const App = () => (
           </Suspense>
         </AudioPlayerProvider>
       </BrowserRouter>
+      <Analytics />
     </TooltipProvider>
   </QueryClientProvider>
 );
