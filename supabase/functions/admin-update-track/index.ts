@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { token, trackId, publishedDate, title, artist, artworkUrl, genres } = await req.json();
+    const { token, trackId, publishedDate, title, artist, artworkUrl, genres, aboutText } = await req.json();
 
     if (!(await verifyToken(token))) {
       return new Response(
@@ -54,6 +54,9 @@ Deno.serve(async (req) => {
     }
     if (artworkUrl !== undefined) {
       updates.artwork_url = artworkUrl || null;
+    }
+    if (aboutText !== undefined) {
+      updates.about_text = aboutText || null;
     }
 
     if (Object.keys(updates).length === 0 && !Array.isArray(genres)) {

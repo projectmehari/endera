@@ -1,9 +1,11 @@
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useMixTracklist } from "@/hooks/useMixes";
 import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
 import { Play, Pause, Download } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import type { Track } from "@/lib/radio-types";
+import { supabase } from "@/integrations/supabase/client";
+import { MUSIC_SERVICES } from "@/lib/music-services";
+import type { Track, TracklistLink } from "@/lib/radio-types";
 
 function formatDuration(seconds: number) {
   const h = Math.floor(seconds / 3600);
@@ -21,8 +23,29 @@ interface MixDetailContentProps {
 export default function MixDetailContent({ mix }: MixDetailContentProps) {
   const { tracks: tracklist, loading: tracklistLoading } = useMixTracklist(mix.id);
   const { playMix, currentMix, mode, isPlaying, pause, resume } = useAudioPlayer();
+  const [linksMap, setLinksMap] = useState<Record<string, TracklistLink[]>>({});
 
   const isActive = mode === "mix" && currentMix?.id === mix.id;
+
+  // Fetch links for all tracklist entries
+  useEffect(() => {
+    if (tracklist.length === 0) return;
+    const ids = tracklist.map((t) => t.id);
+    supabase
+      .from("mix_tracklist_links" as any)
+      .select("*")
+      .in("tracklist_entry_id", ids)
+      .then(({ data }) => {
+        if (data) {
+          const map: Record<string, TracklistLink[]> = {};
+          (data as any[]).forEach((link) => {
+            if (!map[link.tracklist_entry_id]) map[link.tracklist_entry_id] = [];
+            map[link.tracklist_entry_id].push(link);
+          });
+          setLinksMap(map);
+        }
+      });
+  }, [tracklist]);
 
   const handlePlay = () => {
     if (isActive && isPlaying) {
@@ -117,30 +140,70 @@ export default function MixDetailContent({ mix }: MixDetailContentProps) {
         )}
       </p>
 
+      {/* About section */}
+      {mix.about_text && (
+        <div className="w-full max-w-lg mt-8">
+          <Separator className="bg-muted-foreground/20 mb-6" />
+          <h3 className="font-mono text-[10px] tracking-widest text-muted-foreground/60 uppercase mb-3">
+            ABOUT
+          </h3>
+          <p className="font-mono text-xs text-foreground/80 leading-relaxed whitespace-pre-line">
+            {mix.about_text}
+          </p>
+        </div>
+      )}
+
       {/* Tracklist */}
       <div className="w-full max-w-lg mt-8">
         <Separator className="bg-muted-foreground/20 mb-6" />
+        {mix.about_text && (
+          <h3 className="font-mono text-[10px] tracking-widest text-muted-foreground/60 uppercase mb-3">
+            TRACKLIST
+          </h3>
+        )}
         {tracklistLoading ? (
           <span className="font-mono text-xs text-muted-foreground">loading…</span>
         ) : tracklist.length === 0 ? (
           <span className="font-mono text-xs text-muted-foreground">no tracklist available</span>
         ) : (
           <div className="space-y-3">
-            {tracklist.map((t) => (
-              <div key={t.id} className="flex gap-3 font-mono text-xs">
-                <span className="w-[4.5rem] shrink-0 text-muted-foreground/50 pt-0.5">
-                  {t.timestamp_label ? t.timestamp_label.replace(/\b(\d)\b/g, "0$1") : ""}
-                </span>
-                <div className="min-w-0">
-                  <span className="block font-bold text-foreground uppercase truncate">
-                    {t.track_artist}
+            {tracklist.map((t) => {
+              const links = linksMap[t.id] || [];
+              return (
+                <div key={t.id} className="flex gap-3 font-mono text-xs">
+                  <span className="w-[4.5rem] shrink-0 text-muted-foreground/50 pt-0.5">
+                    {t.timestamp_label ? t.timestamp_label.replace(/\b(\d)\b/g, "0$1") : ""}
                   </span>
-                  <span className="block text-muted-foreground truncate">
-                    {t.track_title}
-                  </span>
+                  <div className="min-w-0 flex-1">
+                    <span className="block font-bold text-foreground uppercase truncate">
+                      {t.track_artist}
+                    </span>
+                    <span className="block text-muted-foreground truncate">
+                      {t.track_title}
+                    </span>
+                    {links.length > 0 && (
+                      <div className="flex gap-2 mt-1">
+                        {links.map((link) => {
+                          const service = MUSIC_SERVICES[link.service_type as keyof typeof MUSIC_SERVICES];
+                          return (
+                            <a
+                              key={link.id}
+                              href={link.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title={service?.name || link.service_type}
+                              className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground/50 hover:text-foreground border border-muted-foreground/20 hover:border-foreground px-1.5 py-0.5 transition-colors"
+                            >
+                              {service?.label || link.service_type}
+                            </a>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

@@ -35,6 +35,38 @@ export type Database = {
         }
         Relationships: []
       }
+      mix_tracklist_links: {
+        Row: {
+          created_at: string
+          id: string
+          service_type: string
+          tracklist_entry_id: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          service_type: string
+          tracklist_entry_id: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          service_type?: string
+          tracklist_entry_id?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mix_tracklist_links_tracklist_entry_id_fkey"
+            columns: ["tracklist_entry_id"]
+            isOneToOne: false
+            referencedRelation: "mix_tracklists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mix_tracklists: {
         Row: {
           created_at: string
@@ -170,6 +202,7 @@ export type Database = {
       }
       tracks: {
         Row: {
+          about_text: string | null
           artist: string
           artwork_url: string | null
           created_at: string
@@ -181,6 +214,7 @@ export type Database = {
           title: string
         }
         Insert: {
+          about_text?: string | null
           artist?: string
           artwork_url?: string | null
           created_at?: string
@@ -192,6 +226,7 @@ export type Database = {
           title: string
         }
         Update: {
+          about_text?: string | null
           artist?: string
           artwork_url?: string | null
           created_at?: string

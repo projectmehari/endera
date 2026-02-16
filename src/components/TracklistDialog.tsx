@@ -5,7 +5,8 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import type { Track, MixTracklistEntry } from "@/lib/radio-types";
+import { MUSIC_SERVICES, type MusicServiceType } from "@/lib/music-services";
+import type { Track, MixTracklistEntry, TracklistLink } from "@/lib/radio-types";
 
 interface Props {
   track: Track;
@@ -15,6 +16,7 @@ interface Props {
 
 export default function TracklistDialog({ track, open, onOpenChange }: Props) {
   const [entries, setEntries] = useState<MixTracklistEntry[]>([]);
+  const [linksMap, setLinksMap] = useState<Record<string, TracklistLink[]>>({});
   const [loading, setLoading] = useState(false);
   const [title, setTitle] = useState("");
   const [artist, setArtist] = useState("");
@@ -22,6 +24,9 @@ export default function TracklistDialog({ track, open, onOpenChange }: Props) {
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editFields, setEditFields] = useState({ title: "", artist: "", timestamp: "" });
+  const [addingLinkFor, setAddingLinkFor] = useState<string | null>(null);
+  const [linkService, setLinkService] = useState<MusicServiceType>("bandcamp");
+  const [linkUrl, setLinkUrl] = useState("");
   const { toast } = useToast();
   const token = sessionStorage.getItem("admin_token") || "";
 
@@ -30,7 +35,25 @@ export default function TracklistDialog({ track, open, onOpenChange }: Props) {
     const { data } = await supabase.functions.invoke("admin-tracklist", {
       body: { token, action: "list", mix_id: track.id },
     });
-    setEntries(data?.entries || []);
+    const fetchedEntries = data?.entries || [];
+    setEntries(fetchedEntries);
+
+    // Fetch links for all entries
+    if (fetchedEntries.length > 0) {
+      const ids = fetchedEntries.map((e: MixTracklistEntry) => e.id);
+      const { data: linksData } = await supabase
+        .from("mix_tracklist_links" as any)
+        .select("*")
+        .in("tracklist_entry_id", ids);
+      if (linksData) {
+        const map: Record<string, TracklistLink[]> = {};
+        (linksData as any[]).forEach((link) => {
+          if (!map[link.tracklist_entry_id]) map[link.tracklist_entry_id] = [];
+          map[link.tracklist_entry_id].push(link);
+        });
+        setLinksMap(map);
+      }
+    }
     setLoading(false);
   };
 
@@ -100,6 +123,31 @@ export default function TracklistDialog({ track, open, onOpenChange }: Props) {
     }
   };
 
+  const handleAddLink = async (entryId: string) => {
+    if (!linkUrl.startsWith("http")) {
+      toast({ title: "INVALID URL", variant: "destructive" });
+      return;
+    }
+    const { data, error } = await supabase.functions.invoke("admin-tracklist-link", {
+      body: { token, action: "add", tracklist_entry_id: entryId, service_type: linkService, url: linkUrl },
+    });
+    if (!error && data?.success) {
+      setAddingLinkFor(null);
+      setLinkUrl("");
+      setLinkService("bandcamp");
+      fetchEntries();
+    } else {
+      toast({ title: "FAILED TO ADD LINK", variant: "destructive" });
+    }
+  };
+
+  const handleDeleteLink = async (linkId: string) => {
+    const { data, error } = await supabase.functions.invoke("admin-tracklist-link", {
+      body: { token, action: "delete", link_id: linkId },
+    });
+    if (!error && data?.success) fetchEntries();
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md border-foreground bg-background p-0 gap-0">
@@ -116,79 +164,146 @@ export default function TracklistDialog({ track, open, onOpenChange }: Props) {
             <p className="meter-label">NO ENTRIES</p>
           ) : (
             <div className="space-y-1">
-              {entries.map((entry) => (
-                <div key={entry.id}>
-                  {editingId === entry.id ? (
-                    <div className="space-y-1.5 py-1 border border-foreground/30 p-2">
-                      <div className="space-y-1.5">
-                        <div className="flex items-center gap-1.5">
-                          <span className="meter-label w-16 shrink-0">TIME</span>
-                          <Input
-                            value={editFields.timestamp}
-                            onChange={(e) => setEditFields({ ...editFields, timestamp: e.target.value })}
-                            placeholder="00:15:30"
-                            className="font-mono text-xs h-7"
-                          />
+              {entries.map((entry) => {
+                const entryLinks = linksMap[entry.id] || [];
+                return (
+                  <div key={entry.id}>
+                    {editingId === entry.id ? (
+                      <div className="space-y-1.5 py-1 border border-foreground/30 p-2">
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className="meter-label w-16 shrink-0">TIME</span>
+                            <Input
+                              value={editFields.timestamp}
+                              onChange={(e) => setEditFields({ ...editFields, timestamp: e.target.value })}
+                              placeholder="00:15:30"
+                              className="font-mono text-xs h-7"
+                            />
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="meter-label w-16 shrink-0">ARTIST</span>
+                            <Input
+                              value={editFields.artist}
+                              onChange={(e) => setEditFields({ ...editFields, artist: e.target.value })}
+                              className="font-mono text-xs h-7"
+                            />
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="meter-label w-16 shrink-0">TITLE</span>
+                            <Input
+                              value={editFields.title}
+                              onChange={(e) => setEditFields({ ...editFields, title: e.target.value })}
+                              className="font-mono text-xs h-7"
+                            />
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="meter-label w-16 shrink-0">ARTIST</span>
-                          <Input
-                            value={editFields.artist}
-                            onChange={(e) => setEditFields({ ...editFields, artist: e.target.value })}
-                            className="font-mono text-xs h-7"
-                          />
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="meter-label w-16 shrink-0">TITLE</span>
-                          <Input
-                            value={editFields.title}
-                            onChange={(e) => setEditFields({ ...editFields, title: e.target.value })}
-                            className="font-mono text-xs h-7"
-                          />
+                        <div className="flex gap-1.5">
+                          <button
+                            onClick={() => handleUpdate(entry.id)}
+                            className="meter-label hover:text-foreground transition-colors"
+                          >
+                            [SAVE]
+                          </button>
+                          <button
+                            onClick={() => setEditingId(null)}
+                            className="meter-label hover:text-foreground transition-colors"
+                          >
+                            [CANCEL]
+                          </button>
                         </div>
                       </div>
-                      <div className="flex gap-1.5">
-                        <button
-                          onClick={() => handleUpdate(entry.id)}
-                          className="meter-label hover:text-foreground transition-colors"
-                        >
-                          [SAVE]
-                        </button>
-                        <button
-                          onClick={() => setEditingId(null)}
-                          className="meter-label hover:text-foreground transition-colors"
-                        >
-                          [CANCEL]
-                        </button>
+                    ) : (
+                      <div className="py-1.5 space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="meter-label text-foreground w-6 text-right">{String(entry.position).padStart(2, "0")}</span>
+                          <span className="meter-label text-foreground w-16 shrink-0">{entry.timestamp_label || "—"}</span>
+                          <span className="text-xs font-mono truncate flex-1">
+                            {entry.track_artist.toUpperCase()} — {entry.track_title.toUpperCase()}
+                          </span>
+                        </div>
+                        {/* Links display */}
+                        {entryLinks.length > 0 && (
+                          <div className="flex gap-1.5 pl-8 flex-wrap">
+                            {entryLinks.map((link) => {
+                              const svc = MUSIC_SERVICES[link.service_type as keyof typeof MUSIC_SERVICES];
+                              return (
+                                <span key={link.id} className="flex items-center gap-1">
+                                  <a
+                                    href={link.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground border border-foreground/20 px-1.5 py-0.5 hover:text-foreground hover:border-foreground transition-colors"
+                                  >
+                                    {svc?.label || link.service_type}
+                                  </a>
+                                  <button
+                                    onClick={() => handleDeleteLink(link.id)}
+                                    className="text-[8px] font-mono text-muted-foreground hover:text-destructive transition-colors"
+                                  >
+                                    ×
+                                  </button>
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
+                        {/* Add link form */}
+                        {addingLinkFor === entry.id && (
+                          <div className="pl-8 flex items-center gap-1.5 flex-wrap">
+                            <select
+                              value={linkService}
+                              onChange={(e) => setLinkService(e.target.value as MusicServiceType)}
+                              className="font-mono text-[10px] bg-background border border-foreground/30 px-1.5 py-1 h-7"
+                            >
+                              {Object.entries(MUSIC_SERVICES).map(([key, svc]) => (
+                                <option key={key} value={key}>{svc.name}</option>
+                              ))}
+                            </select>
+                            <Input
+                              value={linkUrl}
+                              onChange={(e) => setLinkUrl(e.target.value)}
+                              placeholder="https://..."
+                              className="font-mono text-xs h-7 flex-1 min-w-[120px]"
+                            />
+                            <button
+                              onClick={() => handleAddLink(entry.id)}
+                              className="meter-label hover:text-foreground transition-colors"
+                            >
+                              [ADD]
+                            </button>
+                            <button
+                              onClick={() => { setAddingLinkFor(null); setLinkUrl(""); }}
+                              className="meter-label hover:text-foreground transition-colors"
+                            >
+                              [X]
+                            </button>
+                          </div>
+                        )}
+                        <div className="flex gap-2 pl-8">
+                          <button
+                            onClick={() => startEdit(entry)}
+                            className="meter-label text-muted-foreground hover:text-foreground transition-colors px-2 py-1 border border-foreground/20 hover:border-foreground"
+                          >
+                            [EDIT]
+                          </button>
+                          <button
+                            onClick={() => { setAddingLinkFor(entry.id); setLinkUrl(""); setLinkService("bandcamp"); }}
+                            className="meter-label text-muted-foreground hover:text-foreground transition-colors px-2 py-1 border border-foreground/20 hover:border-foreground"
+                          >
+                            [+LINK]
+                          </button>
+                          <button
+                            onClick={() => handleDelete(entry.id)}
+                            className="meter-label text-muted-foreground hover:text-destructive transition-colors px-2 py-1 border border-foreground/20 hover:border-destructive"
+                          >
+                            [DEL]
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="py-1.5 space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="meter-label text-foreground w-6 text-right">{String(entry.position).padStart(2, "0")}</span>
-                        <span className="meter-label text-foreground w-16 shrink-0">{entry.timestamp_label || "—"}</span>
-                        <span className="text-xs font-mono truncate flex-1">
-                          {entry.track_artist.toUpperCase()} — {entry.track_title.toUpperCase()}
-                        </span>
-                      </div>
-                      <div className="flex gap-2 pl-8">
-                        <button
-                          onClick={() => startEdit(entry)}
-                          className="meter-label text-muted-foreground hover:text-foreground transition-colors px-2 py-1 border border-foreground/20 hover:border-foreground"
-                        >
-                          [EDIT]
-                        </button>
-                        <button
-                          onClick={() => handleDelete(entry.id)}
-                          className="meter-label text-muted-foreground hover:text-destructive transition-colors px-2 py-1 border border-foreground/20 hover:border-destructive"
-                        >
-                          [DEL]
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </ScrollArea>
