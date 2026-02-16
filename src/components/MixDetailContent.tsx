@@ -5,6 +5,7 @@ import { Play, Pause, Download } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { MUSIC_SERVICES } from "@/lib/music-services";
+import MusicServiceIcon from "@/components/MusicServiceIcon";
 import type { Track, TracklistLink } from "@/lib/radio-types";
 
 function formatDuration(seconds: number) {
@@ -192,8 +193,9 @@ export default function MixDetailContent({ mix }: MixDetailContentProps) {
                               target="_blank"
                               rel="noopener noreferrer"
                               title={service?.name || link.service_type}
-                              className="text-[9px] font-mono uppercase tracking-wider text-muted-foreground/50 hover:text-foreground border border-muted-foreground/20 hover:border-foreground px-1.5 py-0.5 transition-colors"
+                              className="inline-flex items-center gap-1 text-[9px] font-mono uppercase tracking-wider text-muted-foreground/50 hover:text-foreground border border-muted-foreground/20 hover:border-foreground px-1.5 py-0.5 transition-colors"
                             >
+                              <MusicServiceIcon service={link.service_type} size={10} />
                               {service?.label || link.service_type}
                             </a>
                           );
