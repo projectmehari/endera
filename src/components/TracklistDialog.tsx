@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { MUSIC_SERVICES, type MusicServiceType } from "@/lib/music-services";
 import type { Track, MixTracklistEntry, TracklistLink } from "@/lib/radio-types";
+import MusicServiceIcon from "@/components/MusicServiceIcon";
 
 interface Props {
   track: Track;
@@ -232,8 +233,9 @@ export default function TracklistDialog({ track, open, onOpenChange }: Props) {
                                     href={link.url}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-[8px] font-mono uppercase tracking-wider text-muted-foreground border border-foreground/20 px-1.5 py-0.5 hover:text-foreground hover:border-foreground transition-colors"
+                                    className="inline-flex items-center gap-1 text-[8px] font-mono uppercase tracking-wider text-muted-foreground border border-foreground/20 px-1.5 py-0.5 hover:text-foreground hover:border-foreground transition-colors"
                                   >
+                                    <MusicServiceIcon service={link.service_type} size={9} />
                                     {svc?.label || link.service_type}
                                   </a>
                                   <button
