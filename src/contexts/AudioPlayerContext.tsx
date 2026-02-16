@@ -118,6 +118,9 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
         } else {
           setIsPlaying(false);
         }
+      } else if (mode === "live") {
+        // Track ended in live mode — immediately fetch next track
+        refetch().then(() => {});
       }
     };
     audio.addEventListener("timeupdate", onTime);
@@ -130,7 +133,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
       audio.removeEventListener("durationchange", onMeta);
       audio.removeEventListener("ended", onEnded);
     };
-  }, [mode, liveData]);
+  }, [mode, liveData, refetch]);
 
   const playLive = useCallback(async () => {
     const audio = audioRef.current;

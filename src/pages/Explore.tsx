@@ -15,6 +15,7 @@ import type { Track } from "@/lib/radio-types";
 export default function Explore() {
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [search, setSearch] = useState("");
+  const [genresExpanded, setGenresExpanded] = useState(false);
   const { data: genres = [], isLoading: genresLoading } = useGenres();
   const { data: tracks = [], isLoading: tracksLoading } = useTracksByGenre(selectedGenres);
   const { currentMix } = useAudioPlayer();
@@ -79,19 +80,29 @@ export default function Explore() {
               ) : filteredGenres.length === 0 ? (
                 <span className="meter-label">NO GENRES FOUND</span>
               ) : (
-                filteredGenres.map((genre) => (
-                  <button
-                    key={genre}
-                    onClick={() => toggleGenre(genre)}
-                    className={`px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider border transition-colors ${
-                      selectedGenres.includes(genre)
-                        ? "bg-foreground text-background border-foreground"
-                        : "bg-transparent text-foreground border-foreground/30 hover:border-foreground"
-                    }`}
-                  >
-                    {genre}
-                  </button>
-                ))
+                <>
+                  {(genresExpanded || search ? filteredGenres : filteredGenres.slice(0, 5)).map((genre) => (
+                    <button
+                      key={genre}
+                      onClick={() => toggleGenre(genre)}
+                      className={`px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider border transition-colors ${
+                        selectedGenres.includes(genre)
+                          ? "bg-foreground text-background border-foreground"
+                          : "bg-transparent text-foreground border-foreground/30 hover:border-foreground"
+                      }`}
+                    >
+                      {genre}
+                    </button>
+                  ))}
+                  {!search && filteredGenres.length > 5 && (
+                    <button
+                      onClick={() => setGenresExpanded(!genresExpanded)}
+                      className="px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider border border-foreground/30 text-muted-foreground hover:border-foreground hover:text-foreground transition-colors"
+                    >
+                      {genresExpanded ? "SEE LESS" : `SEE MORE (+${filteredGenres.length - 5})`}
+                    </button>
+                  )}
+                </>
               )}
             </div>
             {selectedGenres.length > 0 && (

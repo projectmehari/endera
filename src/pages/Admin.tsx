@@ -90,11 +90,12 @@ function EditTrackDialog({
   track: Track;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (fields: { title?: string; artist?: string; artworkUrl?: string; genres?: string[] }) => Promise<void>;
+  onSave: (fields: { title?: string; artist?: string; artworkUrl?: string; genres?: string[]; aboutText?: string }) => Promise<void>;
 }) {
   const [editTitle, setEditTitle] = useState(track.title);
   const [editArtist, setEditArtist] = useState(track.artist);
   const [editGenres, setEditGenres] = useState("");
+  const [editAbout, setEditAbout] = useState(track.about_text || "");
   const [saving, setSaving] = useState(false);
   const [artworkFile, setArtworkFile] = useState<File | null>(null);
   const { data: existingGenres } = useTrackGenres(track.id);
@@ -103,6 +104,7 @@ function EditTrackDialog({
     setEditTitle(track.title);
     setEditArtist(track.artist);
     setArtworkFile(null);
+    setEditAbout(track.about_text || "");
   }, [track]);
 
   useEffect(() => {
@@ -111,12 +113,16 @@ function EditTrackDialog({
 
   const handleSave = async () => {
     setSaving(true);
-    const fields: { title?: string; artist?: string; artworkUrl?: string; genres?: string[] } = {};
+    const fields: { title?: string; artist?: string; artworkUrl?: string; genres?: string[]; aboutText?: string } = {};
     if (editTitle.trim() !== track.title) fields.title = editTitle.trim();
     if (editArtist.trim() !== track.artist) fields.artist = editArtist.trim();
     // Always send genres to allow updates
     fields.genres = editGenres.split(",").map(g => g.trim().toLowerCase()).filter(g => g.length > 0);
     if (editArtist.trim() !== track.artist) fields.artist = editArtist.trim();
+
+    // Always send aboutText to allow clearing
+    const aboutTrimmed = editAbout.trim();
+    if (aboutTrimmed !== (track.about_text || "")) fields.aboutText = aboutTrimmed || "";
 
     if (artworkFile) {
       const artworkPath = `${crypto.randomUUID()}-${artworkFile.name}`;
@@ -172,6 +178,16 @@ function EditTrackDialog({
                 </button>
               ))}
             </div>
+          </div>
+          <div>
+            <Label className="meter-label">ABOUT</Label>
+            <textarea
+              value={editAbout}
+              onChange={(e) => setEditAbout(e.target.value)}
+              placeholder="Description or notes about this mix..."
+              rows={4}
+              className="mt-1 w-full font-mono text-xs bg-background border border-input px-3 py-2 focus:outline-none focus:ring-1 focus:ring-ring resize-y"
+            />
           </div>
           <button
             onClick={handleSave}
@@ -381,7 +397,22 @@ function TrackManager() {
         setUploadProgress(95);
       }
 
-      const durationSeconds = Math.round(file.size / 24000);
+      // Get accurate duration using Audio API
+      const durationSeconds = await new Promise<number>((resolve) => {
+        const tempAudio = new Audio();
+        tempAudio.preload = "metadata";
+        const objectUrl = URL.createObjectURL(file);
+        tempAudio.src = objectUrl;
+        tempAudio.addEventListener("loadedmetadata", () => {
+          const dur = Math.round(tempAudio.duration);
+          URL.revokeObjectURL(objectUrl);
+          resolve(dur > 0 ? dur : Math.round(file.size / 16000));
+        });
+        tempAudio.addEventListener("error", () => {
+          URL.revokeObjectURL(objectUrl);
+          resolve(Math.round(file.size / 16000));
+        });
+      });
 
       const genresArray = genres.split(",").map(g => g.trim().toLowerCase()).filter(g => g.length > 0);
 

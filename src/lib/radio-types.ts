@@ -8,6 +8,7 @@ export interface Track {
   artwork_url: string | null;
   created_at: string;
   published_date: string | null;
+  about_text: string | null;
 }
 
 export interface StationConfig {
@@ -43,6 +44,14 @@ export interface MixTracklistEntry {
   track_title: string;
   track_artist: string;
   timestamp_label: string | null;
+  created_at: string;
+}
+
+export interface TracklistLink {
+  id: string;
+  tracklist_entry_id: string;
+  service_type: string;
+  url: string;
   created_at: string;
 }
 
